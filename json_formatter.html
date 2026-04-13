@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON formatter</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --panel-soft: #fafafa;
+      --text: #334155;
+      --muted: #64748b;
+      --border: #e5e7eb;
+      --button: #ffffff;
+      --button-hover: #f8fafc;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --key: #0f172a;
+      --string: #047857;
+      --number: #1d4ed8;
+      --boolean: #7c3aed;
+      --null: #dc2626;
+      --toggle: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+    .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 { margin: 0; font-size: 28px; line-height: 1.1; color: #111827; }
+
+    .app-actions, .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) minmax(420px, 1.1fr);
+      gap: 16px;
+    }
+
+    .layout.json-hidden {
+      grid-template-columns: 1fr;
+    }
+
+    .layout.json-hidden #jsonPanel {
+      display: none;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel-soft);
+      min-width: 0;
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #374151;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .status.ok { color: #047857; }
+    .status.error { color: #b91c1c; }
+
+    .panel-body { padding: 14px; }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--button);
+      color: #374151;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    button:hover { background: var(--button-hover); transform: translateY(-1px); }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex: 0 0 16px;
+      color: currentColor;
+    }
+
+    .btn-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .editor {
+      width: 100%;
+      min-height: 76vh;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text);
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      outline: none;
+      white-space: pre;
+      word-break: normal;
+      overflow: auto;
+    }
+
+    .tree-wrap {
+      min-height: 76vh;
+      max-height: 82vh;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 8px 0 10px 0;
+    }
+
+    .tree-root { padding: 0 10px 8px 10px; }
+    .placeholder-text { color: var(--muted); padding: 10px 6px; }
+
+    .node-line {
+      display: flex;
+      align-items: flex-start;
+      min-height: 24px;
+      border-radius: 8px;
+      padding: 1px 6px 1px 2px;
+      min-width: 0;
+    }
+
+    .node-line:hover { background: #fafafa; }
+
+    .indent { display: inline-block; width: 18px; flex: 0 0 18px; }
+
+    .toggle {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--toggle);
+      width: 18px;
+      height: 22px;
+      padding: 0;
+      margin: 0;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex: 0 0 18px;
+      transform: translateY(1px);
+    }
+
+    .toggle:hover { background: #f3f4f6; transform: translateY(1px); }
+    .toggle.placeholder { cursor: default; visibility: hidden; }
+
+    .caret {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      transition: transform .12s ease;
+    }
+
+    .tree-node[data-collapsed="true"] > .node-line .caret { transform: rotate(-90deg); }
+    .tree-node[data-collapsed="true"] > .children,
+    .tree-node[data-collapsed="true"] > .closing-line { display: none; }
+
+    .node-key { color: var(--key); font-weight: 600; }
+    .node-colon, .node-comma, .node-bracket { color: #6b7280; }
+    .node-value.string { color: var(--string); }
+    .node-value.number { color: var(--number); }
+    .node-value.boolean { color: var(--boolean); }
+    .node-value.null { color: var(--null); }
+    .collapsed-inline { color: var(--muted); margin-left: 8px; }
+    .children { margin: 0; padding: 0; }
+
+    @media (max-width: 1180px) {
+      .app-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .editor, .tree-wrap {
+        min-height: 46vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <h1>JSON formatter</h1>
+      <div class="app-actions">
+        <button id="formatBtn" class="icon-btn" title="Форматировать" aria-label="Форматировать">
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h13"/></svg></span>
+        </button>
+        <button id="loadBtn" class="icon-btn" title="Загрузить JSON" aria-label="Загрузить JSON">
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M4 21h16"/></svg></span>
+        </button>
+        <button id="downloadBtn" class="icon-btn" title="Скачать JSON" aria-label="Скачать JSON" disabled>
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span>
+        </button>
+        <button id="copyBtn" class="icon-btn" title="Копировать" aria-label="Копировать" disabled>
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <button id="wrapBtn" class="icon-btn" title="Перенос строк: выключен" aria-label="Перенос строк: выключен">
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M4 7h12"/><path d="M4 12h10a3 3 0 1 1 0 6h-1"/><path d="m15 16-2 2 2 2"/></svg></span>
+        </button>
+        <button id="toggleJsonBtn" class="icon-btn" title="Скрыть JSON-панель" aria-label="Скрыть JSON-панель">
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="1.5"/><path d="M13 7h8"/><path d="M13 12h8"/><path d="M13 17h8"/></svg></span>
+        </button>
+        <button id="clearBtn" class="icon-btn" title="Очистить" aria-label="Очистить">
+          <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="layout" id="layout">
+      <div class="panel" id="jsonPanel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">JSON</div>
+            <div id="status" class="status">Готово</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <input id="fileInput" type="file" accept=".json,application/json,.txt" hidden />
+          <textarea id="editor" class="editor" spellcheck="false"></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">Tree</div>
+            <div id="meta" class="status"></div>
+          </div>
+          <div class="panel-actions">
+            <button id="expandBtn" class="icon-btn" title="Развернуть всё" aria-label="Развернуть всё" disabled>
+              <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>
+            </button>
+            <button id="collapseBtn" class="icon-btn" title="Свернуть всё" aria-label="Свернуть всё" disabled>
+              <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M8 14l4-4 4 4"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="treeWrap" class="tree-wrap">
+            <div id="treeRoot" class="tree-root"><div class="placeholder-text">Пусто</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'json_formatter_state_v15';
+    const SAVE_DEBOUNCE_MS = 250;
+    const LARGE_TEXT_THRESHOLD = 1_500_000;
+    const MASSIVE_NODE_THRESHOLD = 2000;
+
+    const state = {
+      parsed: null,
+      fileName: '',
+      fileSize: 0,
+      collapsed: new Set(),
+      settings: {
+        wrapEnabled: false,
+        showJsonPanel: true
+      },
+      saveTimer: null
+    };
+
+    const els = {
+      layout: document.getElementById('layout'),
+      jsonPanel: document.getElementById('jsonPanel'),
+      fileInput: document.getElementById('fileInput'),
+      editor: document.getElementById('editor'),
+      status: document.getElementById('status'),
+      meta: document.getElementById('meta'),
+      treeRoot: document.getElementById('treeRoot'),
+      formatBtn: document.getElementById('formatBtn'),
+      loadBtn: document.getElementById('loadBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      copyBtn: document.getElementById('copyBtn'),
+      wrapBtn: document.getElementById('wrapBtn'),
+      toggleJsonBtn: document.getElementById('toggleJsonBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      expandBtn: document.getElementById('expandBtn'),
+      collapseBtn: document.getElementById('collapseBtn'),
+    };
+
+    function setStatus(text, type = '') {
+      els.status.textContent = text;
+      els.status.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let value = bytes;
+      let i = 0;
+      while (value >= 1024 && i < units.length - 1) {
+        value /= 1024;
+        i++;
+      }
+      return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function updateMeta() {
+      const parts = [];
+      if (state.fileName) parts.push(state.fileName);
+      if (state.fileSize) parts.push(formatBytes(state.fileSize));
+      if (els.editor.value.length) parts.push(`${els.editor.value.length.toLocaleString('ru-RU')} chars`);
+      els.meta.textContent = parts.join(' • ');
+    }
+
+    function updateButtons(enabled) {
+      els.downloadBtn.disabled = !enabled;
+      els.copyBtn.disabled = !enabled;
+      els.expandBtn.disabled = !enabled;
+      els.collapseBtn.disabled = !enabled;
+    }
+
+    function updateWrap() {
+      if (state.settings.wrapEnabled) {
+        els.editor.style.whiteSpace = 'pre-wrap';
+        els.editor.style.wordBreak = 'break-word';
+        els.wrapBtn.title = 'Перенос строк: включён';
+        els.wrapBtn.setAttribute('aria-label', 'Перенос строк: включён');
+      } else {
+        els.editor.style.whiteSpace = 'pre';
+        els.editor.style.wordBreak = 'normal';
+        els.wrapBtn.title = 'Перенос строк: выключен';
+        els.wrapBtn.setAttribute('aria-label', 'Перенос строк: выключен');
+      }
+    }
+
+    function updateJsonPanelVisibility() {
+      els.layout.classList.toggle('json-hidden', !state.settings.showJsonPanel);
+      if (state.settings.showJsonPanel) {
+        els.toggleJsonBtn.title = 'Скрыть JSON-панель';
+        els.toggleJsonBtn.setAttribute('aria-label', 'Скрыть JSON-панель');
+      } else {
+        els.toggleJsonBtn.title = 'Показать JSON-панель';
+        els.toggleJsonBtn.setAttribute('aria-label', 'Показать JSON-панель');
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function isPrimitive(value) {
+      return value === null || ['string', 'number', 'boolean'].includes(typeof value);
+    }
+
+    function formatPrimitive(value) {
+      if (typeof value === 'string') return JSON.stringify(value);
+      if (value === null) return 'null';
+      return String(value);
+    }
+
+    function isNumberArray(arr) {
+      return Array.isArray(arr) && arr.every(v => typeof v === 'number' && Number.isFinite(v));
+    }
+
+    function repeatIndent(level, indent = '  ') {
+      return indent.repeat(level);
+    }
+
+    function formatCustom(value, level = 0) {
+      const current = repeatIndent(level);
+      const next = repeatIndent(level + 1);
+
+      if (value === null || typeof value !== 'object') return formatPrimitive(value);
+
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '[]';
+
+        if (isNumberArray(value)) {
+          return '[ ' + value.map(v => formatPrimitive(v)).join(', ') + ' ]';
+        }
+
+        const allPrimitives = value.every(v => isPrimitive(v));
+        if (allPrimitives) {
+          const inline = '[ ' + value.map(v => formatPrimitive(v)).join(', ') + ' ]';
+          if (inline.length <= 120) return inline;
+        }
+
+        const items = value.map(item => `${next}${formatCustom(item, level + 1)}`);
+        return '[\n' + items.join(',\n') + '\n' + current + ']';
+      }
+
+      const entries = Object.entries(value);
+      if (entries.length === 0) return '{}';
+
+      const lines = entries.map(([key, val]) => `${next}${JSON.stringify(key)}: ${formatCustom(val, level + 1)}`);
+      return '{\n' + lines.join(',\n') + '\n' + current + '}';
+    }
+
+    function primitiveNodeHtml(value) {
+      const type = value === null ? 'null' : typeof value;
+      const shown = type === 'string' ? JSON.stringify(value) : String(value);
+      return `<span class="node-value ${type}">${escapeHtml(shown)}</span>`;
+    }
+
+    function inlineArrayHtml(arr) {
+      const parts = arr.map(v => {
+        const type = v === null ? 'null' : typeof v;
+        const shown = type === 'string' ? JSON.stringify(v) : String(v);
+        return `<span class="node-value ${type}">${escapeHtml(shown)}</span>`;
+      });
+      return `[ ${parts.join('<span class="node-comma">, </span>')} ]`;
+    }
+
+    function isInlineTreeArray(arr) {
+      if (!Array.isArray(arr) || arr.length === 0) return false;
+      if (isNumberArray(arr)) return true;
+      const allPrimitives = arr.every(v => isPrimitive(v));
+      if (!allPrimitives) return false;
+      const inline = '[ ' + arr.map(v => formatPrimitive(v)).join(', ') + ' ]';
+      return inline.length <= 120;
+    }
+
+    function shortSummary(value) {
+      if (Array.isArray(value)) return `[${value.length}]`;
+      if (value && typeof value === 'object') return `{${Object.keys(value).length}}`;
+      return '';
+    }
+
+    function getValueByPath(path) {
+      if (path === 'root') return state.parsed;
+      const parts = path.slice(5).split('.').filter(Boolean);
+      let current = state.parsed;
+      for (const part of parts) {
+        if (current == null) return undefined;
+        current = current[Array.isArray(current) ? Number(part) : part];
+      }
+      return current;
+    }
+
+    function createIndent(line, level) {
+      for (let i = 0; i < level; i++) {
+        const indent = document.createElement('span');
+        indent.className = 'indent';
+        line.appendChild(indent);
+      }
+    }
+
+    function applyCollapsedState(node) {
+      const collapsed = node.dataset.collapsed === 'true';
+      const lineContent = node.querySelector(':scope > .node-line > span:last-child');
+      if (!lineContent) return;
+
+      const collapsedInline = lineContent.querySelector('.collapsed-inline');
+      const brackets = lineContent.querySelectorAll('.node-bracket');
+      const commas = lineContent.querySelectorAll('.node-comma');
+
+      if (collapsedInline) collapsedInline.style.display = collapsed ? '' : 'none';
+      if (brackets[1]) brackets[1].style.display = collapsed ? '' : 'none';
+      if (commas.length && node.dataset.isContainer === 'true') commas[commas.length - 1].style.display = collapsed ? '' : 'none';
+    }
+
+    function createNodeShell(path, keyName, level, trailingComma) {
+      const value = getValueByPath(path);
+      const isContainer = value !== null && typeof value === 'object';
+      const isArray = Array.isArray(value);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'tree-node';
+      wrapper.dataset.path = path;
+      wrapper.dataset.level = String(level);
+      wrapper.dataset.collapsed = state.collapsed.has(path) ? 'true' : 'false';
+      wrapper.dataset.isContainer = isContainer ? 'true' : 'false';
+      wrapper.dataset.built = 'false';
+
+      const line = document.createElement('div');
+      line.className = 'node-line';
+      createIndent(line, level);
+
+      const toggle = document.createElement('button');
+      toggle.className = 'toggle' + (isContainer ? '' : ' placeholder');
+      toggle.type = 'button';
+      toggle.innerHTML = `<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      if (isContainer) toggle.addEventListener('click', () => toggleNode(path));
+      line.appendChild(toggle);
+
+      const content = document.createElement('span');
+
+      if (keyName !== null) {
+        const key = document.createElement('span');
+        key.className = 'node-key';
+        key.textContent = JSON.stringify(String(keyName));
+        content.appendChild(key);
+
+        const colon = document.createElement('span');
+        colon.className = 'node-colon';
+        colon.textContent = ': ';
+        content.appendChild(colon);
+      }
+
+      if (!isContainer) {
+        content.insertAdjacentHTML('beforeend', primitiveNodeHtml(value));
+        if (trailingComma) {
+          const comma = document.createElement('span');
+          comma.className = 'node-comma';
+          comma.textContent = ',';
+          content.appendChild(comma);
+        }
+        line.appendChild(content);
+        wrapper.appendChild(line);
+        return wrapper;
+      }
+
+      if (isArray && isInlineTreeArray(value)) {
+        content.insertAdjacentHTML('beforeend', inlineArrayHtml(value));
+        if (trailingComma) {
+          const comma = document.createElement('span');
+          comma.className = 'node-comma';
+          comma.textContent = ',';
+          content.appendChild(comma);
+        }
+        line.appendChild(content);
+        wrapper.appendChild(line);
+        return wrapper;
+      }
+
+      const open = document.createElement('span');
+      open.className = 'node-bracket';
+      open.textContent = isArray ? '[' : '{';
+      content.appendChild(open);
+
+      const collapsedInline = document.createElement('span');
+      collapsedInline.className = 'collapsed-inline';
+      collapsedInline.textContent = shortSummary(value);
+      if (wrapper.dataset.collapsed !== 'true') collapsedInline.style.display = 'none';
+      content.appendChild(collapsedInline);
+
+      const closeInline = document.createElement('span');
+      closeInline.className = 'node-bracket';
+      closeInline.textContent = isArray ? ']' : '}';
+      if (wrapper.dataset.collapsed !== 'true') closeInline.style.display = 'none';
+      content.appendChild(closeInline);
+
+      if (trailingComma) {
+        const comma = document.createElement('span');
+        comma.className = 'node-comma';
+        comma.textContent = ',';
+        if (wrapper.dataset.collapsed !== 'true') comma.style.display = 'none';
+        content.appendChild(comma);
+      }
+
+      line.appendChild(content);
+      wrapper.appendChild(line);
+
+      const children = document.createElement('div');
+      children.className = 'children';
+      wrapper.appendChild(children);
+
+      const closing = document.createElement('div');
+      closing.className = 'node-line closing-line';
+      createIndent(closing, level);
+
+      const spacer = document.createElement('span');
+      spacer.className = 'indent';
+      closing.appendChild(spacer);
+
+      const closeContent = document.createElement('span');
+      const closeBracket = document.createElement('span');
+      closeBracket.className = 'node-bracket';
+      closeBracket.textContent = isArray ? ']' : '}';
+      closeContent.appendChild(closeBracket);
+
+      if (trailingComma) {
+        const comma = document.createElement('span');
+        comma.className = 'node-comma';
+        comma.textContent = ',';
+        closeContent.appendChild(comma);
+      }
+
+      closing.appendChild(closeContent);
+      wrapper.appendChild(closing);
+      return wrapper;
+    }
+
+    function ensureChildrenBuilt(node) {
+      if (!node || node.dataset.isContainer !== 'true' || node.dataset.built === 'true') return;
+
+      const path = node.dataset.path;
+      const level = Number(node.dataset.level);
+      const value = getValueByPath(path);
+      const childrenWrap = node.querySelector(':scope > .children');
+      if (!childrenWrap) return;
+
+      const entries = Array.isArray(value) ? value.map((_, i) => [String(i), value[i]]) : Object.entries(value);
+      const total = entries.length;
+      const chunkSize = total > MASSIVE_NODE_THRESHOLD ? 200 : total > 300 ? 100 : 1000;
+      let index = 0;
+
+      function appendChunk() {
+        const frag = document.createDocumentFragment();
+        const newNodes = [];
+        let count = 0;
+
+        while (index < total && count < chunkSize) {
+          const [k] = entries[index];
+          const childPath = Array.isArray(value) ? `${path}.${index}` : `${path}.${k}`;
+          const childKey = Array.isArray(value) ? null : k;
+          const childNode = createNodeShell(childPath, childKey, level + 1, index < total - 1);
+          newNodes.push(childNode);
+          frag.appendChild(childNode);
+          index++;
+          count++;
+        }
+
+        childrenWrap.appendChild(frag);
+
+        for (const childNode of newNodes) {
+          if (childNode.dataset.isContainer === 'true') {
+            applyCollapsedState(childNode);
+            if (childNode.dataset.collapsed !== 'true') {
+              const childValue = getValueByPath(childNode.dataset.path);
+              const childTotal = Array.isArray(childValue) ? childValue.length : Object.keys(childValue || {}).length;
+              if (childTotal <= 200) ensureChildrenBuilt(childNode);
+            }
+          }
+        }
+
+        if (index < total) {
+          requestAnimationFrame(appendChunk);
+        } else {
+          node.dataset.built = 'true';
+        }
+      }
+
+      appendChunk();
+    }
+
+    function toggleNode(path) {
+      const node = els.treeRoot.querySelector(`.tree-node[data-path="${CSS.escape(path)}"]`);
+      if (!node || node.dataset.isContainer !== 'true') return;
+
+      const collapsed = node.dataset.collapsed === 'true';
+      node.dataset.collapsed = collapsed ? 'false' : 'true';
+
+      if (collapsed) {
+        state.collapsed.delete(path);
+        ensureChildrenBuilt(node);
+      } else {
+        state.collapsed.add(path);
+      }
+
+      applyCollapsedState(node);
+      scheduleSave();
+    }
+
+    function renderTreeRoot() {
+      els.treeRoot.innerHTML = '';
+      if (state.parsed === null) {
+        els.treeRoot.innerHTML = '<div class="placeholder-text">Пусто</div>';
+        updateButtons(false);
+        updateMeta();
+        return;
+      }
+
+      const root = createNodeShell('root', null, 0, false);
+      els.treeRoot.appendChild(root);
+      applyCollapsedState(root);
+      if (root.dataset.collapsed !== 'true') ensureChildrenBuilt(root);
+      updateButtons(true);
+      updateMeta();
+    }
+
+    function collapseAll() {
+      state.collapsed.clear();
+      if (state.parsed && typeof state.parsed === 'object') state.collapsed.add('root');
+      renderTreeRoot();
+      scheduleSave();
+    }
+
+    function expandAll() {
+      if (!state.parsed || typeof state.parsed !== 'object') return;
+      state.collapsed.clear();
+      renderTreeRoot();
+
+      if (els.editor.value.length > LARGE_TEXT_THRESHOLD) {
+        setStatus('JSON отформатирован. Полное раскрытие ограничено для больших данных.', 'ok');
+        scheduleSave();
+        return;
+      }
+
+      const root = els.treeRoot.querySelector('.tree-node[data-path="root"]');
+      const queue = root ? [root] : [];
+
+      function processBatch() {
+        let processed = 0;
+        while (queue.length && processed < 50) {
+          const node = queue.shift();
+          if (!node || node.dataset.isContainer !== 'true') continue;
+          node.dataset.collapsed = 'false';
+          ensureChildrenBuilt(node);
+          applyCollapsedState(node);
+
+          const value = getValueByPath(node.dataset.path);
+          const total = Array.isArray(value) ? value.length : Object.keys(value || {}).length;
+          if (total <= MASSIVE_NODE_THRESHOLD) {
+            const children = node.querySelector(':scope > .children');
+            if (children) {
+              for (const child of children.children) {
+                if (child.dataset.isContainer === 'true') queue.push(child);
+              }
+            }
+          }
+          processed++;
+        }
+
+        if (queue.length) requestAnimationFrame(processBatch);
+        else scheduleSave();
+      }
+
+      requestAnimationFrame(processBatch);
+    }
+
+    function parseAndFormat() {
+      const text = els.editor.value.trim();
+      if (!text) {
+        state.parsed = null;
+        state.collapsed.clear();
+        renderTreeRoot();
+        setStatus('Пусто', '');
+        scheduleSave();
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(text);
+        const formatted = formatCustom(parsed);
+        state.parsed = parsed;
+        els.editor.value = formatted;
+        state.collapsed.clear();
+
+        if (typeof parsed === 'object' && parsed !== null && formatted.length > LARGE_TEXT_THRESHOLD) {
+          state.collapsed.add('root');
+        }
+
+        renderTreeRoot();
+        setStatus(
+          formatted.length > LARGE_TEXT_THRESHOLD
+            ? 'JSON отформатирован. Дерево стартует свёрнутым для больших данных.'
+            : 'JSON отформатирован.',
+          'ok'
+        );
+        scheduleSave();
+      } catch (err) {
+        state.parsed = null;
+        renderTreeRoot();
+        setStatus('Ошибка JSON: ' + err.message, 'error');
+      }
+    }
+
+    function saveStateNow() {
+      const payload = {
+        text: els.editor.value,
+        fileName: state.fileName,
+        fileSize: state.fileSize,
+        collapsed: Array.from(state.collapsed).slice(0, 5000),
+        settings: state.settings
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+
+    function scheduleSave() {
+      clearTimeout(state.saveTimer);
+      state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          updateMeta();
+          return;
+        }
+
+        const saved = JSON.parse(raw);
+        if (typeof saved.text === 'string') els.editor.value = saved.text;
+        if (typeof saved.fileName === 'string') state.fileName = saved.fileName;
+        if (typeof saved.fileSize === 'number') state.fileSize = saved.fileSize;
+        if (Array.isArray(saved.collapsed)) state.collapsed = new Set(saved.collapsed);
+
+        if (saved.settings && typeof saved.settings === 'object') {
+          if (typeof saved.settings.wrapEnabled === 'boolean') state.settings.wrapEnabled = saved.settings.wrapEnabled;
+          if (typeof saved.settings.showJsonPanel === 'boolean') state.settings.showJsonPanel = saved.settings.showJsonPanel;
+        }
+
+        updateWrap();
+        updateJsonPanelVisibility();
+        updateMeta();
+
+        if (els.editor.value.trim()) {
+          try {
+            state.parsed = JSON.parse(els.editor.value);
+            renderTreeRoot();
+            setStatus('Восстановлено из localStorage', 'ok');
+          } catch {
+            setStatus('Восстановлен текст, но JSON невалиден', 'error');
+          }
+        }
+      } catch {
+        updateMeta();
+      }
+    }
+
+    async function copyOutput() {
+      const text = els.editor.value;
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('Скопировано', 'ok');
+      } catch {
+        setStatus('Не удалось скопировать', 'error');
+      }
+    }
+
+    function downloadJson() {
+      const text = els.editor.value;
+      if (!text) return;
+
+      const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = state.fileName ? state.fileName.replace(/\.[^.]+$/, '') + '.formatted.json' : 'formatted.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function loadFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        els.editor.value = typeof reader.result === 'string' ? reader.result : '';
+        state.fileName = file.name;
+        state.fileSize = file.size;
+        updateMeta();
+        setStatus(`Загружен ${file.name}`, '');
+        scheduleSave();
+      };
+      reader.readAsText(file);
+    }
+
+    function clearAll() {
+      els.editor.value = '';
+      state.parsed = null;
+      state.fileName = '';
+      state.fileSize = 0;
+      state.collapsed.clear();
+      renderTreeRoot();
+      updateMeta();
+      setStatus('Пусто', '');
+      scheduleSave();
+    }
+
+    els.formatBtn.addEventListener('click', parseAndFormat);
+    els.loadBtn.addEventListener('click', () => els.fileInput.click());
+    els.fileInput.addEventListener('change', e => loadFile(e.target.files?.[0]));
+    els.downloadBtn.addEventListener('click', downloadJson);
+    els.copyBtn.addEventListener('click', copyOutput);
+    els.wrapBtn.addEventListener('click', () => {
+      state.settings.wrapEnabled = !state.settings.wrapEnabled;
+      updateWrap();
+      scheduleSave();
+    });
+    els.toggleJsonBtn.addEventListener('click', () => {
+      state.settings.showJsonPanel = !state.settings.showJsonPanel;
+      updateJsonPanelVisibility();
+      scheduleSave();
+    });
+    els.clearBtn.addEventListener('click', clearAll);
+    els.expandBtn.addEventListener('click', expandAll);
+    els.collapseBtn.addEventListener('click', collapseAll);
+
+    els.editor.addEventListener('input', () => {
+      updateMeta();
+      scheduleSave();
+    });
+
+    els.editor.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        parseAndFormat();
+      }
+    });
+
+    window.addEventListener('beforeunload', saveStateNow);
+
+    updateWrap();
+    updateJsonPanelVisibility();
+    restoreState();
+    if (!els.editor.value) updateMeta();
+  </script>
+</body>
+</html>
