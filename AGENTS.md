@@ -51,6 +51,27 @@ This repository contains arbitrary tools that:
   - Includes a summary section with counts and a table of detected values, inferred units, converted values, and locations.
   - Persists both panel contents in `localStorage`.
 
+- **Base64 Tool** (`base64_tool.html`)
+  - Uses a two-panel layout with plain UTF-8 text on the left and encoded output on the right.
+  - Both panels are editable and conversion happens automatically while the user types or pastes input.
+  - Supports left-to-right encoding and right-to-left decoding.
+  - Supports standard Base64 and Base64URL alphabets.
+  - Supports optional padding emission for encoded output.
+  - Accepts padded and unpadded Base64/Base64URL input during decoding.
+  - Uses UTF-8-safe browser encoding and decoding for text workflows.
+  - Reports decode errors instead of guessing when input is not valid Base64 text.
+  - Persists both panel contents and selected options in `localStorage`.
+
+- **JWT Inspector** (`jwt_inspector.html`)
+  - Parses an existing JWT token into header, payload, and signature parts.
+  - Decodes Base64URL header and payload and shows them in editable JSON panels.
+  - Allows editing header, payload, and signature parts locally.
+  - Rebuilds the JWT token automatically when editable parts change.
+  - Supports signature generation modes for local workflows: keep edited signature, fake signature, or empty signature.
+  - Surfaces basic diagnostics such as malformed token structure, Base64URL decode errors, JSON parse errors, and simple `exp` status checks.
+  - Is intended for offline inspection and local token-shape generation, not for real cryptographic verification.
+  - Persists token input, editable parts, and selected signature mode in `localStorage`.
+
 ### Notes For Future Updates
 
 - Keep tools as single-file HTML documents unless there is a clear reason to change the repository model.
@@ -60,20 +81,3 @@ This repository contains arbitrary tools that:
 ### Candidate Tools
 
 The following tools are planned candidates and are **not implemented yet**. These descriptions are drafts and should be adjusted before development.
-
-- **JWT Inspector** (`jwt_inspector.html`, planned)
-  - Parses an existing JWT into header, payload, and signature parts.
-  - Decodes Base64URL header and payload and shows them as editable JSON.
-  - Allows editing all three JWT parts locally.
-  - Rebuilds a JWT token from header, payload, and signature input.
-  - Supports generating a fake signature for local testing scenarios where cryptographic validity is not required.
-  - Intended for offline inspection and local token-shape generation, not only for parsing.
-  - May later support additional diagnostics such as malformed token detection, expiry display, and algorithm hints.
-
-- **Base64 Encoder/Decoder** (`base64_tool.html`, planned)
-  - Provides local offline Base64 encode/decode functionality.
-  - Intended for text-first workflows in a browser.
-  - May use a two-panel live conversion layout similar to other tools in this repository.
-  - Should support standard Base64 and Base64URL variants.
-  - Should handle UTF-8 text correctly.
-  - May include automatic mode detection, normalization, copy actions, and padding controls.

@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JWT Inspector</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --panel-soft: #fafafa;
+      --text: #334155;
+      --muted: #64748b;
+      --border: #e5e7eb;
+      --button: #ffffff;
+      --button-hover: #f8fafc;
+      --button-active: #f1f5f9;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --ok: #047857;
+      --warn: #b45309;
+      --error: #b91c1c;
+      --info: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    .container {
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #111827;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 980px;
+      line-height: 1.45;
+    }
+
+    .app-actions, .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .triple {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .panel, .summary {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel-soft);
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #374151;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .status.error { color: var(--error); }
+    .status.info { color: var(--info); }
+
+    .panel-body, .summary-body {
+      padding: 14px;
+    }
+
+    button, select {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--button);
+      color: #374151;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .15s ease;
+      font: inherit;
+    }
+
+    button:hover, select:hover {
+      background: var(--button-hover);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .toggle-btn {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .toggle-btn.active {
+      background: var(--button-active);
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex: 0 0 16px;
+      color: currentColor;
+    }
+
+    .btn-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .editor {
+      width: 100%;
+      min-height: 168px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text);
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      outline: none;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .token-editor {
+      min-height: 120px;
+    }
+
+    .compact-editor {
+      min-height: 240px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .summary-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .summary-value {
+      color: #111827;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .summary-note {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .notice {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .diagnostics {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .diagnostics-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .diagnostics-list li {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .diagnostics-list li:last-child {
+      border-bottom: none;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .field-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .select {
+      min-height: 34px;
+      padding: 0 10px;
+    }
+
+    .mode-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #475569;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1320px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .triple {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .app-header {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <div>
+        <h1>JWT inspector</h1>
+        <div class="subtitle">
+          Paste an existing JWT to decode it, or edit the header, payload, and signature parts directly to rebuild a local token. This tool is designed for offline inspection and shape-compatible local token generation.
+        </div>
+      </div>
+      <div class="app-actions">
+        <div class="row">
+          <span class="field-label">Signature</span>
+          <select id="signatureMode" class="select" aria-label="Signature mode">
+            <option value="keep">Keep edited signature</option>
+            <option value="fake" selected>Fake signature</option>
+            <option value="empty">Empty signature</option>
+          </select>
+        </div>
+        <button id="copyBtn" class="icon-btn" type="button" title="Copy token" aria-label="Copy token" disabled>
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+          </span>
+        </button>
+        <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title-row">
+              <div class="panel-title">JWT</div>
+              <div id="tokenStatus" class="status">Waiting for token input</div>
+            </div>
+            <div id="tokenModeChip" class="mode-chip">Mode: idle</div>
+          </div>
+          <div class="panel-body">
+            <textarea id="tokenInput" class="editor token-editor" spellcheck="false" placeholder="Paste a JWT here or edit the sections below to build one"></textarea>
+          </div>
+        </div>
+
+        <div class="triple">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title-row">
+                <div class="panel-title">Header</div>
+                <div id="headerStatus" class="status">JSON expected</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <textarea id="headerEditor" class="editor compact-editor" spellcheck="false"></textarea>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title-row">
+                <div class="panel-title">Payload</div>
+                <div id="payloadStatus" class="status">JSON expected</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <textarea id="payloadEditor" class="editor compact-editor" spellcheck="false"></textarea>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title-row">
+                <div class="panel-title">Signature</div>
+                <div id="signatureStatus" class="status">Base64URL text</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <textarea id="signatureEditor" class="editor compact-editor" spellcheck="false" placeholder="Fake or custom signature text"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">Diagnostics</div>
+            <div id="summaryStatus" class="status">Ready</div>
+          </div>
+        </div>
+        <div class="summary-body">
+          <div class="notice">
+            This tool does not perform real cryptographic verification or signing. The fake signature mode generates a deterministic Base64URL string for local testing where token structure matters but signature validity does not.
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-card">
+              <div class="summary-label">Algorithm</div>
+              <div id="algValue" class="summary-value">n/a</div>
+              <div class="summary-note">Header `alg` if present</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Type</div>
+              <div id="typValue" class="summary-value">n/a</div>
+              <div class="summary-note">Header `typ` if present</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Expiry</div>
+              <div id="expValue" class="summary-value">n/a</div>
+              <div class="summary-note">Payload `exp` if present</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Signature Mode</div>
+              <div id="signatureModeValue" class="summary-value">fake</div>
+              <div class="summary-note">Current token build mode</div>
+            </div>
+          </div>
+
+          <div class="diagnostics">
+            <ul id="diagnosticsList" class="diagnostics-list">
+              <li>Paste a token or edit the parts directly.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'jwt_inspector_state_v1';
+    const SAVE_DEBOUNCE_MS = 180;
+    const DEFAULT_HEADER = {
+      alg: 'HS256',
+      typ: 'JWT'
+    };
+    const DEFAULT_PAYLOAD = {
+      sub: 'local-user',
+      name: 'Local Test User',
+      iat: Math.floor(Date.now() / 1000)
+    };
+
+    const state = {
+      signatureMode: 'fake',
+      saveTimer: null,
+      syncing: false
+    };
+
+    const els = {
+      tokenInput: document.getElementById('tokenInput'),
+      headerEditor: document.getElementById('headerEditor'),
+      payloadEditor: document.getElementById('payloadEditor'),
+      signatureEditor: document.getElementById('signatureEditor'),
+      signatureMode: document.getElementById('signatureMode'),
+      copyBtn: document.getElementById('copyBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      tokenStatus: document.getElementById('tokenStatus'),
+      headerStatus: document.getElementById('headerStatus'),
+      payloadStatus: document.getElementById('payloadStatus'),
+      signatureStatus: document.getElementById('signatureStatus'),
+      summaryStatus: document.getElementById('summaryStatus'),
+      tokenModeChip: document.getElementById('tokenModeChip'),
+      algValue: document.getElementById('algValue'),
+      typValue: document.getElementById('typValue'),
+      expValue: document.getElementById('expValue'),
+      signatureModeValue: document.getElementById('signatureModeValue'),
+      diagnosticsList: document.getElementById('diagnosticsList')
+    };
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+
+    function setStatus(el, text, type = '') {
+      el.textContent = text;
+      el.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function toBase64Url(bytes) {
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const slice = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...slice);
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function fromBase64Url(text) {
+      const normalized = text.replace(/-/g, '+').replace(/_/g, '/');
+      const mod = normalized.length % 4;
+      if (mod === 1) throw new Error('Base64URL length is invalid');
+      const padded = mod === 0 ? normalized : normalized + '='.repeat(4 - mod);
+      const binary = atob(padded);
+      const out = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+      return out;
+    }
+
+    function base64UrlEncodeText(text) {
+      return toBase64Url(encoder.encode(text));
+    }
+
+    function base64UrlDecodeText(text) {
+      return decoder.decode(fromBase64Url(text));
+    }
+
+    function stringifyJson(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    function parseJsonEditor(text, name) {
+      try {
+        return { ok: true, value: JSON.parse(text) };
+      } catch (error) {
+        return { ok: false, error: `${name} JSON error: ${error.message}` };
+      }
+    }
+
+    function fakeSignatureFor(headerSegment, payloadSegment) {
+      return base64UrlEncodeText(`local-test-signature:${headerSegment}.${payloadSegment}`);
+    }
+
+    function updateSummaryValues(header, payload) {
+      els.algValue.textContent = header && header.alg != null ? String(header.alg) : 'n/a';
+      els.typValue.textContent = header && header.typ != null ? String(header.typ) : 'n/a';
+      els.signatureModeValue.textContent = state.signatureMode;
+
+      if (payload && typeof payload.exp === 'number' && Number.isFinite(payload.exp)) {
+        try {
+          const iso = new Date(payload.exp * 1000).toISOString();
+          els.expValue.textContent = iso.slice(0, 10);
+        } catch {
+          els.expValue.textContent = 'invalid';
+        }
+      } else {
+        els.expValue.textContent = 'n/a';
+      }
+    }
+
+    function renderDiagnostics(items) {
+      if (!items.length) {
+        els.diagnosticsList.innerHTML = '<li>No issues detected.</li>';
+        return;
+      }
+      els.diagnosticsList.innerHTML = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function saveStateNow() {
+      const payload = {
+        tokenInput: els.tokenInput.value,
+        headerEditor: els.headerEditor.value,
+        payloadEditor: els.payloadEditor.value,
+        signatureEditor: els.signatureEditor.value,
+        signatureMode: state.signatureMode
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+
+    function scheduleSave() {
+      clearTimeout(state.saveTimer);
+      state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.tokenInput === 'string') els.tokenInput.value = saved.tokenInput;
+        if (typeof saved.headerEditor === 'string') els.headerEditor.value = saved.headerEditor;
+        if (typeof saved.payloadEditor === 'string') els.payloadEditor.value = saved.payloadEditor;
+        if (typeof saved.signatureEditor === 'string') els.signatureEditor.value = saved.signatureEditor;
+        if (saved.signatureMode === 'keep' || saved.signatureMode === 'fake' || saved.signatureMode === 'empty') {
+          state.signatureMode = saved.signatureMode;
+        }
+      } catch {}
+    }
+
+    function applySignatureMode(headerSegment, payloadSegment) {
+      if (state.signatureMode === 'empty') return '';
+      if (state.signatureMode === 'fake') return fakeSignatureFor(headerSegment, payloadSegment);
+      return els.signatureEditor.value.trim();
+    }
+
+    function rebuildTokenFromParts() {
+      if (state.syncing) return;
+
+      const diagnostics = [];
+      const headerResult = parseJsonEditor(els.headerEditor.value, 'Header');
+      const payloadResult = parseJsonEditor(els.payloadEditor.value, 'Payload');
+
+      if (!headerResult.ok) diagnostics.push(headerResult.error);
+      if (!payloadResult.ok) diagnostics.push(payloadResult.error);
+
+      if (!headerResult.ok || !payloadResult.ok) {
+        setStatus(els.headerStatus, headerResult.ok ? 'JSON ok' : 'Invalid JSON', headerResult.ok ? 'ok' : 'error');
+        setStatus(els.payloadStatus, payloadResult.ok ? 'JSON ok' : 'Invalid JSON', payloadResult.ok ? 'ok' : 'error');
+        setStatus(els.tokenStatus, 'Cannot rebuild token until JSON is valid', 'error');
+        setStatus(els.summaryStatus, 'JSON validation error', 'error');
+        els.copyBtn.disabled = !els.tokenInput.value;
+        renderDiagnostics(diagnostics);
+        updateSummaryValues(headerResult.ok ? headerResult.value : null, payloadResult.ok ? payloadResult.value : null);
+        scheduleSave();
+        return;
+      }
+
+      const headerSegment = base64UrlEncodeText(stringifyJson(headerResult.value));
+      const payloadSegment = base64UrlEncodeText(stringifyJson(payloadResult.value));
+      const signature = applySignatureMode(headerSegment, payloadSegment);
+
+      state.syncing = true;
+      els.signatureEditor.value = signature;
+      els.tokenInput.value = `${headerSegment}.${payloadSegment}.${signature}`;
+      state.syncing = false;
+
+      setStatus(els.headerStatus, 'JSON ok', 'ok');
+      setStatus(els.payloadStatus, 'JSON ok', 'ok');
+      setStatus(els.signatureStatus, state.signatureMode === 'keep' ? 'Using edited signature part' : state.signatureMode === 'fake' ? 'Using fake signature' : 'Using empty signature', 'info');
+      setStatus(els.tokenStatus, 'Token rebuilt automatically', 'ok');
+      setStatus(els.summaryStatus, 'Editors are driving token generation', 'info');
+      els.tokenModeChip.textContent = 'Mode: rebuild';
+      els.copyBtn.disabled = !els.tokenInput.value;
+
+      if (!headerResult.value.alg) diagnostics.push('Header does not include `alg`.');
+      if (!headerResult.value.typ) diagnostics.push('Header does not include `typ`.');
+      if (payloadResult.value.exp != null) {
+        if (typeof payloadResult.value.exp !== 'number' || !Number.isFinite(payloadResult.value.exp)) {
+          diagnostics.push('Payload `exp` exists but is not a finite Unix timestamp.');
+        } else {
+          const delta = payloadResult.value.exp * 1000 - Date.now();
+          diagnostics.push(delta < 0 ? 'Payload `exp` is already expired.' : 'Payload `exp` is in the future.');
+        }
+      }
+
+      updateSummaryValues(headerResult.value, payloadResult.value);
+      renderDiagnostics(diagnostics);
+      scheduleSave();
+    }
+
+    function decodeTokenInput() {
+      if (state.syncing) return;
+
+      const raw = els.tokenInput.value.trim();
+      const diagnostics = [];
+
+      if (!raw) {
+        setStatus(els.tokenStatus, 'Waiting for token input');
+        setStatus(els.headerStatus, 'JSON expected');
+        setStatus(els.payloadStatus, 'JSON expected');
+        setStatus(els.signatureStatus, 'Base64URL text');
+        setStatus(els.summaryStatus, 'Ready');
+        els.tokenModeChip.textContent = 'Mode: idle';
+        els.copyBtn.disabled = true;
+        renderDiagnostics(['Paste a token or edit the parts directly.']);
+        updateSummaryValues(null, null);
+        scheduleSave();
+        return;
+      }
+
+      const parts = raw.split('.');
+      if (parts.length !== 3) {
+        setStatus(els.tokenStatus, 'JWT must contain exactly 3 dot-separated parts', 'error');
+        setStatus(els.summaryStatus, 'Token parse error', 'error');
+        els.tokenModeChip.textContent = 'Mode: parse';
+        renderDiagnostics(['Token must contain header.payload.signature with exactly two dots.']);
+        els.copyBtn.disabled = false;
+        scheduleSave();
+        return;
+      }
+
+      let headerText = '';
+      let payloadText = '';
+
+      try {
+        headerText = base64UrlDecodeText(parts[0]);
+      } catch (error) {
+        diagnostics.push('Header decode error: ' + error.message);
+      }
+
+      try {
+        payloadText = base64UrlDecodeText(parts[1]);
+      } catch (error) {
+        diagnostics.push('Payload decode error: ' + error.message);
+      }
+
+      let headerValue = null;
+      let payloadValue = null;
+
+      if (headerText) {
+        const parsed = parseJsonEditor(headerText, 'Header');
+        if (parsed.ok) {
+          headerValue = parsed.value;
+        } else {
+          diagnostics.push(parsed.error);
+        }
+      }
+
+      if (payloadText) {
+        const parsed = parseJsonEditor(payloadText, 'Payload');
+        if (parsed.ok) {
+          payloadValue = parsed.value;
+        } else {
+          diagnostics.push(parsed.error);
+        }
+      }
+
+      state.syncing = true;
+      if (headerText) els.headerEditor.value = headerValue ? stringifyJson(headerValue) : headerText;
+      if (payloadText) els.payloadEditor.value = payloadValue ? stringifyJson(payloadValue) : payloadText;
+      els.signatureEditor.value = parts[2];
+      state.syncing = false;
+
+      setStatus(els.headerStatus, headerValue ? 'Decoded JSON' : 'Decode or JSON error', headerValue ? 'ok' : 'error');
+      setStatus(els.payloadStatus, payloadValue ? 'Decoded JSON' : 'Decode or JSON error', payloadValue ? 'ok' : 'error');
+      setStatus(els.signatureStatus, 'Raw signature part loaded', 'info');
+      setStatus(els.tokenStatus, diagnostics.length ? 'Token parsed with issues' : 'Token parsed successfully', diagnostics.length ? 'warn' : 'ok');
+      setStatus(els.summaryStatus, diagnostics.length ? 'Token parsed with diagnostics' : 'Token parsed successfully', diagnostics.length ? 'warn' : 'ok');
+      els.tokenModeChip.textContent = 'Mode: parse';
+      els.copyBtn.disabled = false;
+
+      if (headerValue && !headerValue.alg) diagnostics.push('Header does not include `alg`.');
+      if (headerValue && !headerValue.typ) diagnostics.push('Header does not include `typ`.');
+      if (payloadValue && payloadValue.exp != null) {
+        if (typeof payloadValue.exp !== 'number' || !Number.isFinite(payloadValue.exp)) {
+          diagnostics.push('Payload `exp` exists but is not a finite Unix timestamp.');
+        } else {
+          const delta = payloadValue.exp * 1000 - Date.now();
+          diagnostics.push(delta < 0 ? 'Payload `exp` is already expired.' : 'Payload `exp` is in the future.');
+        }
+      }
+
+      updateSummaryValues(headerValue, payloadValue);
+      renderDiagnostics(diagnostics);
+      scheduleSave();
+    }
+
+    function clearAll() {
+      state.syncing = true;
+      els.tokenInput.value = '';
+      els.headerEditor.value = stringifyJson(DEFAULT_HEADER);
+      els.payloadEditor.value = stringifyJson(DEFAULT_PAYLOAD);
+      els.signatureEditor.value = '';
+      state.syncing = false;
+      rebuildTokenFromParts();
+    }
+
+    async function copyToken() {
+      if (!els.tokenInput.value) return;
+      try {
+        await navigator.clipboard.writeText(els.tokenInput.value);
+        setStatus(els.tokenStatus, 'Token copied', 'ok');
+      } catch {
+        setStatus(els.tokenStatus, 'Failed to copy token', 'error');
+      }
+    }
+
+    let tokenTimer = null;
+    let editorTimer = null;
+
+    function scheduleDecode() {
+      clearTimeout(tokenTimer);
+      tokenTimer = setTimeout(decodeTokenInput, 120);
+    }
+
+    function scheduleRebuild() {
+      clearTimeout(editorTimer);
+      editorTimer = setTimeout(rebuildTokenFromParts, 120);
+    }
+
+    els.tokenInput.addEventListener('input', scheduleDecode);
+    els.headerEditor.addEventListener('input', scheduleRebuild);
+    els.payloadEditor.addEventListener('input', scheduleRebuild);
+    els.signatureEditor.addEventListener('input', () => {
+      if (state.signatureMode === 'keep') scheduleRebuild();
+      else scheduleSave();
+    });
+    els.signatureMode.addEventListener('change', () => {
+      state.signatureMode = els.signatureMode.value;
+      rebuildTokenFromParts();
+    });
+    els.copyBtn.addEventListener('click', copyToken);
+    els.clearBtn.addEventListener('click', clearAll);
+    window.addEventListener('beforeunload', saveStateNow);
+
+    restoreState();
+    els.signatureMode.value = state.signatureMode;
+
+    if (!els.headerEditor.value.trim()) els.headerEditor.value = stringifyJson(DEFAULT_HEADER);
+    if (!els.payloadEditor.value.trim()) els.payloadEditor.value = stringifyJson(DEFAULT_PAYLOAD);
+
+    if (els.tokenInput.value.trim()) decodeTokenInput();
+    else rebuildTokenFromParts();
+  </script>
+</body>
+</html>

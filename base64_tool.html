@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base64 Tool</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --panel-soft: #fafafa;
+      --text: #334155;
+      --muted: #64748b;
+      --border: #e5e7eb;
+      --button: #ffffff;
+      --button-hover: #f8fafc;
+      --button-active: #f1f5f9;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --ok: #047857;
+      --warn: #b45309;
+      --error: #b91c1c;
+      --info: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #111827;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 920px;
+      line-height: 1.45;
+    }
+
+    .app-actions, .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .panel, .summary {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel-soft);
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #374151;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .status.error { color: var(--error); }
+    .status.info { color: var(--info); }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--button);
+      color: #374151;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    button:hover {
+      background: var(--button-hover);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .toggle-btn {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .toggle-btn.active {
+      background: var(--button-active);
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex: 0 0 16px;
+      color: currentColor;
+    }
+
+    .btn-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .editor {
+      width: 100%;
+      min-height: 60vh;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text);
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      outline: none;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .summary-body {
+      padding: 14px;
+    }
+
+    .notice {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .summary-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .summary-value {
+      color: #111827;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .summary-note {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mode-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #475569;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1180px) {
+      .app-header { flex-direction: column; }
+      .layout { grid-template-columns: 1fr; }
+      .editor { min-height: 42vh; }
+    }
+
+    @media (max-width: 780px) {
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <div>
+        <h1>Base64 tool</h1>
+        <div class="subtitle">
+          Paste plain UTF-8 text or Base64 into either panel. The tool converts live in both directions, supports standard Base64 and Base64URL alphabets, and keeps the workflow fully offline.
+        </div>
+      </div>
+      <div class="app-actions">
+        <button id="alphabetStdBtn" class="toggle-btn active" type="button" title="Use standard Base64 alphabet">Base64</button>
+        <button id="alphabetUrlBtn" class="toggle-btn" type="button" title="Use URL-safe Base64 alphabet">Base64URL</button>
+        <button id="paddingBtn" class="toggle-btn active" type="button" title="Emit trailing = padding">Padding On</button>
+        <button id="copyBtn" class="icon-btn" type="button" title="Copy right panel" aria-label="Copy right panel" disabled>
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+          </span>
+        </button>
+        <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">Text</div>
+            <div id="leftStatus" class="status">Empty</div>
+          </div>
+          <div id="sourceChip" class="mode-chip">Source: waiting</div>
+        </div>
+        <div class="panel-body">
+          <textarea id="left" class="editor" spellcheck="false" placeholder="Paste plain text here"></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">Encoded</div>
+            <div id="rightStatus" class="status">Waiting for input</div>
+          </div>
+          <div id="directionChip" class="mode-chip">Direction: unchanged</div>
+        </div>
+        <div class="panel-body">
+          <textarea id="right" class="editor" spellcheck="false" placeholder="Paste Base64 or Base64URL here"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="panel-header">
+        <div class="panel-title-row">
+          <div class="panel-title">Summary</div>
+          <div id="summaryStatus" class="status">Ready</div>
+        </div>
+      </div>
+      <div class="summary-body">
+        <div class="notice">
+          Right-to-left decoding accepts both padded and unpadded input. If decoding fails or the bytes are not valid UTF-8 text, the tool keeps the source panel unchanged and reports the error instead of guessing.
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-label">Alphabet</div>
+            <div id="alphabetValue" class="summary-value">Base64</div>
+            <div class="summary-note">Emission mode for encoding</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Padding</div>
+            <div id="paddingValue" class="summary-value">On</div>
+            <div class="summary-note">Emission mode for encoding</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Left Length</div>
+            <div id="leftLength" class="summary-value">0</div>
+            <div class="summary-note">UTF-8 text characters</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Right Length</div>
+            <div id="rightLength" class="summary-value">0</div>
+            <div class="summary-note">Encoded characters</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'base64_tool_state_v1';
+    const SAVE_DEBOUNCE_MS = 180;
+
+    const state = {
+      alphabet: 'std',
+      padding: true,
+      saveTimer: null,
+      syncing: false
+    };
+
+    const els = {
+      left: document.getElementById('left'),
+      right: document.getElementById('right'),
+      leftStatus: document.getElementById('leftStatus'),
+      rightStatus: document.getElementById('rightStatus'),
+      summaryStatus: document.getElementById('summaryStatus'),
+      sourceChip: document.getElementById('sourceChip'),
+      directionChip: document.getElementById('directionChip'),
+      alphabetStdBtn: document.getElementById('alphabetStdBtn'),
+      alphabetUrlBtn: document.getElementById('alphabetUrlBtn'),
+      paddingBtn: document.getElementById('paddingBtn'),
+      copyBtn: document.getElementById('copyBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      alphabetValue: document.getElementById('alphabetValue'),
+      paddingValue: document.getElementById('paddingValue'),
+      leftLength: document.getElementById('leftLength'),
+      rightLength: document.getElementById('rightLength')
+    };
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+
+    function setStatus(el, text, type = '') {
+      el.textContent = text;
+      el.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function updateControls() {
+      els.alphabetStdBtn.classList.toggle('active', state.alphabet === 'std');
+      els.alphabetUrlBtn.classList.toggle('active', state.alphabet === 'url');
+      els.paddingBtn.classList.toggle('active', state.padding);
+      els.paddingBtn.textContent = state.padding ? 'Padding On' : 'Padding Off';
+      els.alphabetValue.textContent = state.alphabet === 'std' ? 'Base64' : 'Base64URL';
+      els.paddingValue.textContent = state.padding ? 'On' : 'Off';
+      els.leftLength.textContent = String(els.left.value.length);
+      els.rightLength.textContent = String(els.right.value.length);
+      els.copyBtn.disabled = !els.right.value;
+    }
+
+    function toBase64(bytes) {
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const slice = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...slice);
+      }
+      return btoa(binary);
+    }
+
+    function fromBase64(base64) {
+      const binary = atob(base64);
+      const out = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+      return out;
+    }
+
+    function encodeText(text) {
+      const bytes = encoder.encode(text);
+      let out = toBase64(bytes);
+      if (state.alphabet === 'url') out = out.replace(/\+/g, '-').replace(/\//g, '_');
+      if (!state.padding) out = out.replace(/=+$/g, '');
+      return out;
+    }
+
+    function normalizeBase64Input(text) {
+      const compact = text.replace(/\s+/g, '');
+      const normalized = compact.replace(/-/g, '+').replace(/_/g, '/');
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) {
+        throw new Error('Input contains characters outside Base64/Base64URL alphabet');
+      }
+      const mod = normalized.length % 4;
+      if (mod === 1) throw new Error('Base64 length is invalid');
+      return mod === 0 ? normalized : normalized + '='.repeat(4 - mod);
+    }
+
+    function decodeText(text) {
+      const normalized = normalizeBase64Input(text);
+      const bytes = fromBase64(normalized);
+      return decoder.decode(bytes);
+    }
+
+    function saveStateNow() {
+      const payload = {
+        left: els.left.value,
+        right: els.right.value,
+        alphabet: state.alphabet,
+        padding: state.padding
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+
+    function scheduleSave() {
+      clearTimeout(state.saveTimer);
+      state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.left === 'string') els.left.value = saved.left;
+        if (typeof saved.right === 'string') els.right.value = saved.right;
+        if (saved.alphabet === 'std' || saved.alphabet === 'url') state.alphabet = saved.alphabet;
+        if (typeof saved.padding === 'boolean') state.padding = saved.padding;
+      } catch {}
+    }
+
+    function clearAll() {
+      state.syncing = true;
+      els.left.value = '';
+      els.right.value = '';
+      state.syncing = false;
+      setStatus(els.leftStatus, 'Empty');
+      setStatus(els.rightStatus, 'Waiting for input');
+      setStatus(els.summaryStatus, 'Ready');
+      els.sourceChip.textContent = 'Source: waiting';
+      els.directionChip.textContent = 'Direction: unchanged';
+      updateControls();
+      scheduleSave();
+    }
+
+    async function copyRight() {
+      if (!els.right.value) return;
+      try {
+        await navigator.clipboard.writeText(els.right.value);
+        setStatus(els.rightStatus, 'Encoded output copied', 'ok');
+      } catch {
+        setStatus(els.rightStatus, 'Failed to copy encoded output', 'error');
+      }
+    }
+
+    function updateFromLeft() {
+      if (state.syncing) return;
+      const text = els.left.value;
+      updateControls();
+
+      if (!text) {
+        state.syncing = true;
+        els.right.value = '';
+        state.syncing = false;
+        setStatus(els.leftStatus, 'Empty');
+        setStatus(els.rightStatus, 'Waiting for input');
+        setStatus(els.summaryStatus, 'Ready');
+        els.sourceChip.textContent = 'Source: left';
+        els.directionChip.textContent = 'Direction: unchanged';
+        updateControls();
+        scheduleSave();
+        return;
+      }
+
+      try {
+        const encoded = encodeText(text);
+        state.syncing = true;
+        els.right.value = encoded;
+        state.syncing = false;
+        setStatus(els.leftStatus, 'Plain text accepted', 'ok');
+        setStatus(els.rightStatus, 'Text encoded automatically', 'ok');
+        setStatus(els.summaryStatus, 'Left panel is driving conversion', 'info');
+        els.sourceChip.textContent = 'Source: left text';
+        els.directionChip.textContent = 'Direction: left → right';
+      } catch (error) {
+        setStatus(els.leftStatus, 'Encoding failed', 'error');
+        setStatus(els.rightStatus, error.message, 'error');
+        setStatus(els.summaryStatus, 'Encoding error', 'error');
+      }
+
+      updateControls();
+      scheduleSave();
+    }
+
+    function updateFromRight() {
+      if (state.syncing) return;
+      const text = els.right.value;
+      updateControls();
+
+      if (!text) {
+        state.syncing = true;
+        els.left.value = '';
+        state.syncing = false;
+        setStatus(els.leftStatus, 'Waiting for input');
+        setStatus(els.rightStatus, 'Empty');
+        setStatus(els.summaryStatus, 'Ready');
+        els.sourceChip.textContent = 'Source: right';
+        els.directionChip.textContent = 'Direction: unchanged';
+        updateControls();
+        scheduleSave();
+        return;
+      }
+
+      try {
+        const decoded = decodeText(text);
+        state.syncing = true;
+        els.left.value = decoded;
+        state.syncing = false;
+        setStatus(els.leftStatus, 'Base64 decoded automatically', 'ok');
+        setStatus(els.rightStatus, 'Encoded text accepted', 'ok');
+        setStatus(els.summaryStatus, 'Right panel is driving conversion', 'info');
+        els.sourceChip.textContent = 'Source: right encoded';
+        els.directionChip.textContent = 'Direction: right → left';
+      } catch (error) {
+        setStatus(els.leftStatus, 'Decode failed', 'warn');
+        setStatus(els.rightStatus, error.message, 'error');
+        setStatus(els.summaryStatus, 'Decoding error', 'error');
+      }
+
+      updateControls();
+      scheduleSave();
+    }
+
+    let leftTimer = null;
+    let rightTimer = null;
+
+    function scheduleUpdateFromLeft() {
+      clearTimeout(leftTimer);
+      leftTimer = setTimeout(updateFromLeft, 100);
+    }
+
+    function scheduleUpdateFromRight() {
+      clearTimeout(rightTimer);
+      rightTimer = setTimeout(updateFromRight, 100);
+    }
+
+    els.left.addEventListener('input', scheduleUpdateFromLeft);
+    els.right.addEventListener('input', scheduleUpdateFromRight);
+    els.alphabetStdBtn.addEventListener('click', () => {
+      state.alphabet = 'std';
+      updateControls();
+      updateFromLeft();
+    });
+    els.alphabetUrlBtn.addEventListener('click', () => {
+      state.alphabet = 'url';
+      updateControls();
+      updateFromLeft();
+    });
+    els.paddingBtn.addEventListener('click', () => {
+      state.padding = !state.padding;
+      updateControls();
+      updateFromLeft();
+    });
+    els.copyBtn.addEventListener('click', copyRight);
+    els.clearBtn.addEventListener('click', clearAll);
+    window.addEventListener('beforeunload', saveStateNow);
+
+    restoreState();
+    updateControls();
+    if (els.right.value.trim()) updateFromRight();
+    else updateFromLeft();
+  </script>
+</body>
+</html>
