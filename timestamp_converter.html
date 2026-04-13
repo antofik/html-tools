@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timestamp Converter</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --panel-soft: #fafafa;
+      --text: #334155;
+      --muted: #64748b;
+      --border: #e5e7eb;
+      --button: #ffffff;
+      --button-hover: #f8fafc;
+      --button-active: #f1f5f9;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --ok: #047857;
+      --warn: #b45309;
+      --error: #b91c1c;
+      --info: #1d4ed8;
+      --accent-soft: #eff6ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #111827;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 900px;
+      line-height: 1.45;
+    }
+
+    .app-actions, .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel-soft);
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #374151;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .status.error { color: var(--error); }
+    .status.info { color: var(--info); }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--button);
+      color: #374151;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    button:hover {
+      background: var(--button-hover);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .toggle-btn {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .toggle-btn.active {
+      background: var(--button-active);
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex: 0 0 16px;
+      color: currentColor;
+    }
+
+    .btn-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .editor {
+      width: 100%;
+      min-height: 62vh;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text);
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      outline: none;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    textarea.editor {
+      word-break: break-word;
+    }
+
+    .readonly {
+      background: #fbfdff;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .summary-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .summary-value {
+      color: #111827;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .summary-note {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: auto;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+      font-size: 13px;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #fafafa;
+      color: #374151;
+      font-size: 12px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td code {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #0f172a;
+      background: #f8fafc;
+      padding: 2px 6px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .empty {
+      padding: 18px;
+      color: var(--muted);
+    }
+
+    .mode-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #475569;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .notice {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      background: var(--accent-soft);
+      color: #1e3a8a;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1180px) {
+      .app-header {
+        flex-direction: column;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .editor {
+        min-height: 42vh;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <div>
+        <h1>Timestamp converter</h1>
+        <div class="subtitle">
+          Paste raw text or JSON into either panel. The tool converts likely Unix timestamps from left to right and converts backtick-wrapped ISO-8601 UTC dates from right to left. Valid JSON is transformed structurally; mixed text is rewritten inline.
+        </div>
+      </div>
+      <div class="app-actions">
+        <button id="copyBtn" class="icon-btn" type="button" title="Copy output" aria-label="Copy output" disabled>
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+          </span>
+        </button>
+        <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">Input</div>
+            <div id="inputMeta" class="status">Empty</div>
+          </div>
+          <div class="mode-chip" id="inputModeChip">Source: waiting</div>
+        </div>
+        <div class="panel-body">
+          <textarea id="input" class="editor" spellcheck="false" placeholder='Examples:
+1712841600
+1712841600123
+{"createdAt":1712841600,"updatedAt":"1712841600123"}
+Build finished at 1712841600 and retried at 1712841665'></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <div class="panel-title">Output</div>
+            <div id="status" class="status">Waiting for input</div>
+          </div>
+          <div class="mode-chip" id="outputModeChip">Direction: unchanged</div>
+        </div>
+        <div class="panel-body">
+          <textarea id="output" class="editor readonly" spellcheck="false" placeholder="Converted output will appear here automatically"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title-row">
+          <div class="panel-title">Detections</div>
+          <div id="summaryStatus" class="status">No timestamps detected</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="notice">
+          Detection is intentionally conservative. Left-to-right conversion currently recognizes only 10-digit second timestamps and 13-digit millisecond timestamps that fall within the years 2000-2100. Right-to-left conversion searches for backtick-wrapped ISO UTC dates such as <code>`2024-04-11T00:00:00.000Z`</code>.
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-label">Matches</div>
+            <div id="matchCount" class="summary-value">0</div>
+            <div class="summary-note">All detected timestamps</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">JSON Mode</div>
+            <div id="jsonModeValue" class="summary-value">No</div>
+            <div class="summary-note">Whole input parsed as JSON</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Seconds</div>
+            <div id="secondsCount" class="summary-value">0</div>
+            <div class="summary-note">10-digit Unix values</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Milliseconds</div>
+            <div id="millisCount" class="summary-value">0</div>
+            <div class="summary-note">13-digit Unix values</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Original</th>
+                <th>Unit</th>
+                <th>ISO UTC</th>
+                <th>Local Time</th>
+                <th>Path / Position</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTable">
+              <tr><td colspan="5" class="empty">No timestamps detected yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'timestamp_converter_state_v1';
+    const SAVE_DEBOUNCE_MS = 180;
+    const SEC_MIN = Date.UTC(2000, 0, 1) / 1000;
+    const SEC_MAX = Date.UTC(2100, 0, 1) / 1000;
+    const MS_MIN = Date.UTC(2000, 0, 1);
+    const MS_MAX = Date.UTC(2100, 0, 1);
+    const TOKEN_RE = /(^|[^0-9])(-?\d{10}|\d{13})(?=$|[^0-9])/g;
+    const ISO_BACKTICK_RE = /`(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)`/g;
+
+    const state = {
+      saveTimer: null
+    };
+
+    const els = {
+      input: document.getElementById('input'),
+      output: document.getElementById('output'),
+      status: document.getElementById('status'),
+      summaryStatus: document.getElementById('summaryStatus'),
+      inputMeta: document.getElementById('inputMeta'),
+      inputModeChip: document.getElementById('inputModeChip'),
+      outputModeChip: document.getElementById('outputModeChip'),
+      matchCount: document.getElementById('matchCount'),
+      jsonModeValue: document.getElementById('jsonModeValue'),
+      secondsCount: document.getElementById('secondsCount'),
+      millisCount: document.getElementById('millisCount'),
+      summaryTable: document.getElementById('summaryTable'),
+      copyBtn: document.getElementById('copyBtn'),
+      clearBtn: document.getElementById('clearBtn')
+    };
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(text, type = '') {
+      els.status.textContent = text;
+      els.status.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function setSummaryStatus(text, type = '') {
+      els.summaryStatus.textContent = text;
+      els.summaryStatus.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function formatInputMeta() {
+      const text = els.input.value;
+      if (!text) {
+        els.inputMeta.textContent = 'Empty';
+        return;
+      }
+      els.inputMeta.textContent = `${text.length.toLocaleString('en-US')} chars • ${text.split(/\r\n|\r|\n/).length.toLocaleString('en-US')} lines`;
+    }
+
+    function looksLikeTimestampNumber(num) {
+      if (!Number.isFinite(num)) return null;
+      if (!Number.isInteger(num)) return null;
+
+      if (Math.abs(num) >= 1e12 && num >= MS_MIN && num <= MS_MAX) {
+        return {
+          original: String(num),
+          unit: 'ms',
+          epochMs: num
+        };
+      }
+
+      if (Math.abs(num) >= 1e9 && num >= SEC_MIN && num <= SEC_MAX) {
+        return {
+          original: String(num),
+          unit: 'sec',
+          epochMs: num * 1000
+        };
+      }
+
+      return null;
+    }
+
+    function looksLikeTimestampString(text) {
+      if (!/^-?\d{10}$|^\d{13}$/.test(text)) return null;
+      const num = Number(text);
+      const details = looksLikeTimestampNumber(num);
+      if (!details) return null;
+      return {
+        original: text,
+        unit: details.unit,
+        epochMs: details.epochMs
+      };
+    }
+
+    function isoUtc(ms) {
+      return new Date(ms).toISOString();
+    }
+
+    function localTime(ms) {
+      return new Date(ms).toLocaleString();
+    }
+
+    function replacementText(iso) {
+      return '`' + iso + '`';
+    }
+
+    function transformJsonValue(value, path, detections) {
+      if (typeof value === 'number') {
+        const match = looksLikeTimestampNumber(value);
+        if (!match) return value;
+        const iso = isoUtc(match.epochMs);
+        detections.push({
+          original: match.original,
+          unit: match.unit,
+          iso,
+          local: localTime(match.epochMs),
+          location: path || 'root'
+        });
+        return replacementText(iso);
+      }
+
+      if (typeof value === 'string') {
+        const direct = looksLikeTimestampString(value);
+        if (direct) {
+          const iso = isoUtc(direct.epochMs);
+          detections.push({
+            original: direct.original,
+            unit: direct.unit,
+            iso,
+            local: localTime(direct.epochMs),
+            location: path || 'root'
+          });
+          return replacementText(iso);
+        }
+
+        let replaced = false;
+        const next = value.replace(TOKEN_RE, (full, prefix, digits) => {
+          const found = looksLikeTimestampString(digits);
+          if (!found) return full;
+          const iso = isoUtc(found.epochMs);
+          detections.push({
+            original: found.original,
+            unit: found.unit,
+            iso,
+            local: localTime(found.epochMs),
+            location: path || 'root'
+          });
+          replaced = true;
+          return prefix + replacementText(iso);
+        });
+        return replaced ? next : value;
+      }
+
+      if (Array.isArray(value)) {
+        return value.map((item, index) => transformJsonValue(item, `${path}[${index}]`, detections));
+      }
+
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const [key, inner] of Object.entries(value)) {
+          const nextPath = path ? `${path}.${key}` : `root.${key}`;
+          out[key] = transformJsonValue(inner, nextPath, detections);
+        }
+        return out;
+      }
+
+      return value;
+    }
+
+    function transformJsonText(text) {
+      try {
+        const parsed = JSON.parse(text);
+        const detections = [];
+        const transformed = transformJsonValue(parsed, 'root', detections);
+        return {
+          ok: true,
+          isJson: true,
+          output: JSON.stringify(transformed, null, 2),
+          detections
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error
+        };
+      }
+    }
+
+    function transformPlainText(text) {
+      const detections = [];
+      const output = text.replace(TOKEN_RE, (full, prefix, digits, offset) => {
+        const found = looksLikeTimestampString(digits);
+        if (!found) return full;
+        const iso = isoUtc(found.epochMs);
+        detections.push({
+          original: found.original,
+          unit: found.unit,
+          iso,
+          local: localTime(found.epochMs),
+          location: `char ${offset + prefix.length}`
+        });
+        return prefix + replacementText(iso);
+      });
+      return {
+        isJson: false,
+        output,
+        detections
+      };
+    }
+
+    function transformIsoJsonValue(value, path, detections) {
+      if (typeof value === 'string') {
+        const direct = value.match(/^`(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)`$/);
+        if (direct) {
+          const ms = Date.parse(direct[1]);
+          if (!Number.isNaN(ms)) {
+            const sec = Math.floor(ms / 1000);
+            detections.push({
+              original: direct[1],
+              unit: 'iso',
+              iso: direct[1],
+              local: localTime(ms),
+              location: path || 'root',
+              unix: String(sec)
+            });
+            return sec;
+          }
+        }
+
+        let replaced = false;
+        const next = value.replace(ISO_BACKTICK_RE, (full, iso) => {
+          const ms = Date.parse(iso);
+          if (Number.isNaN(ms)) return full;
+          const sec = Math.floor(ms / 1000);
+          detections.push({
+            original: iso,
+            unit: 'iso',
+            iso,
+            local: localTime(ms),
+            location: path || 'root',
+            unix: String(sec)
+          });
+          replaced = true;
+          return String(sec);
+        });
+        return replaced ? next : value;
+      }
+
+      if (Array.isArray(value)) {
+        return value.map((item, index) => transformIsoJsonValue(item, `${path}[${index}]`, detections));
+      }
+
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const [key, inner] of Object.entries(value)) {
+          const nextPath = path ? `${path}.${key}` : `root.${key}`;
+          out[key] = transformIsoJsonValue(inner, nextPath, detections);
+        }
+        return out;
+      }
+
+      return value;
+    }
+
+    function reverseJsonText(text) {
+      try {
+        const parsed = JSON.parse(text);
+        const detections = [];
+        const transformed = transformIsoJsonValue(parsed, 'root', detections);
+        return {
+          ok: true,
+          isJson: true,
+          output: JSON.stringify(transformed, null, 2),
+          detections
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error
+        };
+      }
+    }
+
+    function reversePlainText(text) {
+      const detections = [];
+      const output = text.replace(ISO_BACKTICK_RE, (full, iso, offset) => {
+        const ms = Date.parse(iso);
+        if (Number.isNaN(ms)) return full;
+        const sec = Math.floor(ms / 1000);
+        detections.push({
+          original: iso,
+          unit: 'iso',
+          iso,
+          local: localTime(ms),
+          location: `char ${offset}`,
+          unix: String(sec)
+        });
+        return String(sec);
+      });
+      return {
+        isJson: false,
+        output,
+        detections
+      };
+    }
+
+    function renderSummary(result, source) {
+      const seconds = result.detections.filter(item => item.unit === 'sec').length;
+      const millis = result.detections.filter(item => item.unit === 'ms').length;
+
+      els.matchCount.textContent = String(result.detections.length);
+      els.jsonModeValue.textContent = result.isJson ? 'Yes' : 'No';
+      els.secondsCount.textContent = String(seconds);
+      els.millisCount.textContent = String(millis);
+      els.inputModeChip.textContent = `Source: ${source === 'left' ? 'left' : 'right'} ${result.isJson ? 'json' : 'text'}`;
+      els.outputModeChip.textContent = `Direction: ${source === 'left' ? 'left → right' : 'right → left'}`;
+
+      if (!result.detections.length) {
+        els.summaryTable.innerHTML = '<tr><td colspan="5" class="empty">No timestamps detected yet.</td></tr>';
+        setSummaryStatus(result.isJson ? 'Valid JSON, but no convertible values detected' : 'No convertible values detected', result.isJson ? 'info' : '');
+        return;
+      }
+
+      setSummaryStatus(
+        `${result.detections.length.toLocaleString('en-US')} timestamp${result.detections.length === 1 ? '' : 's'} detected`,
+        'ok'
+      );
+
+      els.summaryTable.innerHTML = result.detections.map(item => `
+        <tr>
+          <td><code>${escapeHtml(item.unit === 'iso' ? '`' + item.original + '`' : item.original)}</code></td>
+          <td>${escapeHtml(item.unit)}</td>
+          <td><code>${escapeHtml(item.iso)}</code></td>
+          <td>${escapeHtml(item.local)}</td>
+          <td>${escapeHtml(item.location)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function resetEmptyState() {
+      els.output.value = '';
+      els.copyBtn.disabled = true;
+      setStatus('Waiting for input');
+      setSummaryStatus('No timestamps detected');
+      els.matchCount.textContent = '0';
+      els.jsonModeValue.textContent = 'No';
+      els.secondsCount.textContent = '0';
+      els.millisCount.textContent = '0';
+      els.summaryTable.innerHTML = '<tr><td colspan="5" class="empty">No timestamps detected yet.</td></tr>';
+      els.inputModeChip.textContent = 'Source: waiting';
+      els.outputModeChip.textContent = 'Direction: unchanged';
+    }
+
+    function updateFromLeft() {
+      const text = els.input.value;
+      formatInputMeta();
+
+      if (!text.trim()) {
+        resetEmptyState();
+        scheduleSave();
+        return;
+      }
+
+      const jsonAttempt = transformJsonText(text);
+      const result = jsonAttempt.ok ? jsonAttempt : transformPlainText(text);
+
+      els.output.value = result.output;
+      els.copyBtn.disabled = !result.output;
+
+      if (jsonAttempt.ok) {
+        setStatus(
+          result.detections.length
+            ? 'Valid JSON transformed automatically'
+            : 'Valid JSON detected, no timestamps converted',
+          result.detections.length ? 'ok' : 'info'
+        );
+      } else {
+        setStatus(
+          result.detections.length
+            ? 'Text transformed automatically'
+            : 'Input treated as plain text, no timestamps converted',
+          result.detections.length ? 'ok' : 'warn'
+        );
+      }
+
+      renderSummary(result, 'left');
+      scheduleSave();
+    }
+
+    function updateFromRight() {
+      const text = els.output.value;
+      formatInputMeta();
+
+      if (!text.trim()) {
+        els.input.value = '';
+        resetEmptyState();
+        scheduleSave();
+        return;
+      }
+
+      const jsonAttempt = reverseJsonText(text);
+      const result = jsonAttempt.ok ? jsonAttempt : reversePlainText(text);
+
+      els.input.value = result.output;
+      formatInputMeta();
+      els.copyBtn.disabled = !els.output.value;
+
+      if (jsonAttempt.ok) {
+        setStatus(
+          result.detections.length
+            ? 'Backtick-wrapped ISO dates converted back to Unix timestamps'
+            : 'Valid JSON detected, no backtick-wrapped ISO dates converted',
+          result.detections.length ? 'ok' : 'info'
+        );
+      } else {
+        setStatus(
+          result.detections.length
+            ? 'Text converted back automatically'
+            : 'Right panel treated as plain text, no backtick-wrapped ISO dates converted',
+          result.detections.length ? 'ok' : 'warn'
+        );
+      }
+
+      renderSummary(result, 'right');
+      scheduleSave();
+    }
+
+    function updateOutput() {
+      const text = els.input.value;
+      formatInputMeta();
+
+      if (!text.trim()) {
+        els.output.value = '';
+        els.copyBtn.disabled = true;
+        setStatus('Waiting for input');
+        setSummaryStatus('No timestamps detected');
+        els.matchCount.textContent = '0';
+        els.jsonModeValue.textContent = 'No';
+        els.secondsCount.textContent = '0';
+        els.millisCount.textContent = '0';
+        els.summaryTable.innerHTML = '<tr><td colspan="5" class="empty">No timestamps detected yet.</td></tr>';
+        els.inputModeChip.textContent = 'Source: waiting';
+        els.outputModeChip.textContent = 'Direction: unchanged';
+        scheduleSave();
+        return;
+      }
+      updateFromLeft();
+    }
+
+    function saveStateNow() {
+      const payload = {
+        input: els.input.value,
+        output: els.output.value
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+
+    function scheduleSave() {
+      clearTimeout(state.saveTimer);
+      state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.input === 'string') els.input.value = saved.input;
+        if (typeof saved.output === 'string') els.output.value = saved.output;
+      } catch {}
+    }
+
+    async function copyOutput() {
+      if (!els.output.value) return;
+      try {
+        await navigator.clipboard.writeText(els.output.value);
+        setStatus('Output copied', 'ok');
+      } catch {
+        setStatus('Failed to copy output', 'error');
+      }
+    }
+
+    function clearAll() {
+      els.input.value = '';
+      els.output.value = '';
+      resetEmptyState();
+      formatInputMeta();
+      scheduleSave();
+    }
+
+    let inputTimer = null;
+    let outputTimer = null;
+    function scheduleUpdateFromLeft() {
+      clearTimeout(inputTimer);
+      inputTimer = setTimeout(updateFromLeft, 120);
+    }
+
+    function scheduleUpdateFromRight() {
+      clearTimeout(outputTimer);
+      outputTimer = setTimeout(updateFromRight, 120);
+    }
+
+    els.input.addEventListener('input', scheduleUpdateFromLeft);
+    els.output.addEventListener('input', scheduleUpdateFromRight);
+    els.copyBtn.addEventListener('click', copyOutput);
+    els.clearBtn.addEventListener('click', clearAll);
+    window.addEventListener('beforeunload', saveStateNow);
+
+    restoreState();
+    if (els.output.value.trim()) updateFromRight();
+    else updateFromLeft();
+  </script>
+</body>
+</html>
