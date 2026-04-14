@@ -41,7 +41,17 @@
     .inputs { grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
     .ignore-panel { margin-bottom: 18px; display: none; }
     .ignore-panel.open { display: block; }
-    .ignore-editor { min-height: 96px; max-height: 180px; margin-top: 0; }
+    .ignore-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .ignore-block { min-width: 0; }
+    .ignore-block-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ignore-block-title { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; margin: 0; }
+    .ignore-help { position: relative; display: inline-flex; align-items: center; }
+    .help-btn { width: 18px; min-width: 18px; height: 18px; min-height: 18px; padding: 0; border-radius: 999px; border: 1px solid #cbd5e1; background: #ffffff; color: #64748b; font-size: 11px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
+    .help-btn:hover, .help-btn:focus-visible { background: #f8fafc; border-color: #94a3b8; color: #334155; }
+    .help-tooltip { position: absolute; left: 0; top: calc(100% + 8px); width: 320px; max-width: min(320px, calc(100vw - 64px)); padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #0f172a; color: #e2e8f0; box-shadow: 0 16px 32px rgba(15, 23, 42, 0.22); font-size: 12px; line-height: 1.45; text-transform: none; letter-spacing: 0; white-space: normal; opacity: 0; pointer-events: none; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease; z-index: 8; }
+    .help-btn:hover + .help-tooltip, .help-btn:focus-visible + .help-tooltip { opacity: 1; transform: translateY(0); }
+    .ignore-editor { min-height: 96px; max-height: 180px; margin-top: 0; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+    .ignore-editor.patterns-disabled { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
     .panel { background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fafafa; }
     .panel-title { font-weight: 700; font-size: 14px; letter-spacing: .02em; color: #374151; }
@@ -120,6 +130,7 @@
       .toolbar, .inputs { grid-template-columns: 1fr; }
       .toolbar { width: 100%; justify-content: flex-start; }
       .overview-rail { width: 24px; }
+      .ignore-grid { grid-template-columns: 1fr; }
       .side-head, .diff-row { grid-template-columns: 1fr; }
       .col-head + .col-head, .half + .half { border-left: none; border-top: 1px solid var(--border); }
     }
@@ -156,7 +167,28 @@
     <div id="ignorePanel" class="panel ignore-panel">
       <div class="panel-header"><div class="panel-title">Ignore Patterns</div><div style="display:flex;align-items:center;gap:10px;"><button id="toggleIgnoreActiveBtn" class="inline-toggle" type="button">Patterns on</button><div class="small" id="ignoreMeta">No ignore patterns</div></div></div>
       <div class="panel-body">
-        <textarea id="ignorePatterns" class="preview ignore-editor" spellcheck="false" placeholder="One regex per line. Example: \d+\.\d+\.\d+\.\d+"></textarea>
+        <div class="ignore-grid">
+          <div class="ignore-block">
+            <div class="ignore-block-title-row">
+              <div class="ignore-block-title">Ignore In Values</div>
+              <div class="ignore-help">
+                <button class="help-btn" type="button" aria-label="How ignore-in-values patterns work">?</button>
+                <div class="help-tooltip">One regex per line. Matching fragments inside values are replaced before comparison, so the line still participates in diffing but only non-matching parts are highlighted. Use this for IP addresses, timestamps, IDs, tokens, or other variable substrings you want to ignore.</div>
+              </div>
+            </div>
+            <textarea id="ignorePatterns" class="preview ignore-editor" spellcheck="false" placeholder="One regex per line. Example: \d+\.\d+\.\d+\.\d+"></textarea>
+          </div>
+          <div class="ignore-block">
+            <div class="ignore-block-title-row">
+              <div class="ignore-block-title">Skip Entire Lines</div>
+              <div class="ignore-help">
+                <button class="help-btn" type="button" aria-label="How skip-entire-lines patterns work">?</button>
+                <div class="help-tooltip">One regex per line. If a line or parsed env key matches, that whole entry is removed from both sides before diffing. Use this for noisy sections such as SERVICE blocks, secrets, health checks, or generated metadata. In Env mode, nearby blank and comment separators around skipped blocks are also trimmed.</div>
+              </div>
+            </div>
+            <textarea id="skipPatterns" class="preview ignore-editor" spellcheck="false" placeholder="One regex per line. Example: (?i)password|secret|token"></textarea>
+          </div>
+        </div>
       </div>
     </div>
     <div class="inputs">
@@ -183,7 +215,7 @@
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
-    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, saveTimer: null };
+    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, diagnostics: null, saveTimer: null };
     const els = {
       compareMode: document.getElementById('compareMode'),
       toggleWhitespaceBtn: document.getElementById('toggleWhitespaceBtn'),
@@ -193,6 +225,7 @@
       toggleIgnoreActiveBtn: document.getElementById('toggleIgnoreActiveBtn'),
       ignoreBadge: document.getElementById('ignoreBadge'),
       ignorePatterns: document.getElementById('ignorePatterns'),
+      skipPatterns: document.getElementById('skipPatterns'),
       ignoreMeta: document.getElementById('ignoreMeta'),
       leftFile: document.getElementById('leftFile'),
       rightFile: document.getElementById('rightFile'),
@@ -232,9 +265,10 @@
       if (state.ignoreWhitespace) out = normalizeWhitespaceForCompare(out);
       return out;
     }
-    function buildIgnorePatternInfo() {
-      if (!state.ignorePatternsEnabled) return { compiled: [], warnings: [], storedCount: normalizeLines(els.ignorePatterns.value || '').map(line => line.trim()).filter(Boolean).length, enabled: false };
-      const lines = normalizeLines(els.ignorePatterns.value || '');
+    function compilePatternInfo(rawText, enabled) {
+      const storedCount = normalizeLines(rawText || '').map(line => line.trim()).filter(Boolean).length;
+      if (!enabled) return { compiled: [], warnings: [], storedCount, enabled: false };
+      const lines = normalizeLines(rawText || '');
       const compiled = [];
       const warnings = [];
       for (let index = 0; index < lines.length; index++) {
@@ -262,6 +296,8 @@
       }
       return { compiled, warnings, storedCount: compiled.length, enabled: true };
     }
+    function buildIgnorePatternInfo() { return compilePatternInfo(els.ignorePatterns.value || '', state.ignorePatternsEnabled); }
+    function buildSkipPatternInfo() { return compilePatternInfo(els.skipPatterns.value || '', state.ignorePatternsEnabled); }
     function applyIgnorePatterns(text, patternInfo) {
       let out = text;
       for (const entry of patternInfo.compiled) {
@@ -269,6 +305,13 @@
         out = out.replace(entry.regex, entry.token);
       }
       return out;
+    }
+    function shouldSkipText(text, patternInfo) {
+      for (const entry of patternInfo.compiled) {
+        entry.regex.lastIndex = 0;
+        if (entry.regex.test(text ?? '')) return true;
+      }
+      return false;
     }
     function buildIgnoredSegments(text, patternInfo) {
       let segments = [{ ignored: false, raw: text, compare: text }];
@@ -342,23 +385,30 @@
       }
       return { compiled, warnings: patternInfo.warnings, storedCount: patternInfo.storedCount, enabled: patternInfo.enabled };
     }
-    function updateIgnoreMeta(patternInfo) {
-      if (!patternInfo.compiled.length && !patternInfo.warnings.length) {
-        const hasStoredPatterns = !patternInfo.enabled && patternInfo.storedCount > 0;
-        els.ignoreMeta.textContent = hasStoredPatterns ? `${patternInfo.storedCount} stored pattern${patternInfo.storedCount === 1 ? '' : 's'}, inactive` : 'No ignore patterns';
-        els.ignoreBadge.textContent = hasStoredPatterns ? String(patternInfo.storedCount) : '0';
+    function updateIgnoreMeta(ignorePatternInfo, skipPatternInfo) {
+      const activeCount = ignorePatternInfo.compiled.length + skipPatternInfo.compiled.length;
+      const warningCount = ignorePatternInfo.warnings.length + skipPatternInfo.warnings.length;
+      const storedCount = ignorePatternInfo.storedCount + skipPatternInfo.storedCount;
+      const parts = [];
+      if (ignorePatternInfo.compiled.length) parts.push(`value ${ignorePatternInfo.compiled.length}`);
+      if (skipPatternInfo.compiled.length) parts.push(`line ${skipPatternInfo.compiled.length}`);
+      if (state.diagnostics?.skipped) parts.push(`skipped L${state.diagnostics.skipped.left}/R${state.diagnostics.skipped.right}`);
+      if (!activeCount && !warningCount) {
+        const hasStoredPatterns = (!ignorePatternInfo.enabled || !skipPatternInfo.enabled) && storedCount > 0;
+        els.ignoreMeta.textContent = hasStoredPatterns ? `${storedCount} stored pattern${storedCount === 1 ? '' : 's'}, inactive` : (state.diagnostics?.skipped ? `No active patterns, skipped L${state.diagnostics.skipped.left}/R${state.diagnostics.skipped.right}` : 'No ignore patterns');
+        els.ignoreBadge.textContent = hasStoredPatterns ? String(storedCount) : '0';
         els.ignoreBadge.classList.toggle('visible', hasStoredPatterns);
         els.ignoreBadge.classList.toggle('inactive', hasStoredPatterns);
         return;
       }
-      if (patternInfo.warnings.length) {
-        els.ignoreMeta.textContent = `${patternInfo.compiled.length} active, ${patternInfo.warnings.length} invalid`;
+      if (warningCount) {
+        els.ignoreMeta.textContent = `${activeCount} active, ${warningCount} invalid${parts.length ? `, ${parts.join(', ')}` : ''}`;
       } else {
-        els.ignoreMeta.textContent = `${patternInfo.compiled.length} active pattern${patternInfo.compiled.length === 1 ? '' : 's'}`;
+        els.ignoreMeta.textContent = `${activeCount} active pattern${activeCount === 1 ? '' : 's'}${parts.length ? `, ${parts.join(', ')}` : ''}`;
       }
-      els.ignoreBadge.textContent = String(patternInfo.compiled.length);
-      els.ignoreBadge.classList.toggle('visible', patternInfo.compiled.length > 0);
-      els.ignoreBadge.classList.toggle('inactive', !patternInfo.enabled);
+      els.ignoreBadge.textContent = String(activeCount);
+      els.ignoreBadge.classList.toggle('visible', activeCount > 0);
+      els.ignoreBadge.classList.toggle('inactive', !ignorePatternInfo.enabled || !skipPatternInfo.enabled);
     }
     function updateIgnorePanelVisibility() {
       els.ignorePanel.classList.toggle('open', state.ignorePanelOpen);
@@ -368,12 +418,19 @@
     function updateIgnoreEnabledButton() {
       els.toggleIgnoreActiveBtn.textContent = state.ignorePatternsEnabled ? 'Patterns on' : 'Patterns off';
       els.toggleIgnoreActiveBtn.classList.toggle('active', state.ignorePatternsEnabled);
+      els.ignorePatterns.classList.toggle('patterns-disabled', !state.ignorePatternsEnabled);
+      els.skipPatterns.classList.toggle('patterns-disabled', !state.ignorePatternsEnabled);
     }
     function updateWhitespaceButton() {
       els.toggleWhitespaceBtn.classList.toggle('active', state.ignoreWhitespace);
     }
     function updateInvisibleButton() {
       els.toggleInvisibleBtn.classList.toggle('active', state.showInvisibleChars);
+    }
+    function ensurePatternsEnabledOnEdit() {
+      if (state.ignorePatternsEnabled) return;
+      state.ignorePatternsEnabled = true;
+      updateIgnoreEnabledButton();
     }
     function scheduleSave() {
       clearTimeout(state.saveTimer);
@@ -389,6 +446,7 @@
           leftMeta: els.leftMeta.textContent,
           rightMeta: els.rightMeta.textContent,
           ignorePatterns: els.ignorePatterns.value,
+          skipPatterns: els.skipPatterns.value,
           ignorePanelOpen: state.ignorePanelOpen,
           ignorePatternsEnabled: state.ignorePatternsEnabled,
           ignoreWhitespace: state.ignoreWhitespace,
@@ -410,6 +468,7 @@
         if (typeof saved.leftMeta === 'string') els.leftMeta.textContent = saved.leftMeta || 'not loaded';
         if (typeof saved.rightMeta === 'string') els.rightMeta.textContent = saved.rightMeta || 'not loaded';
         if (typeof saved.ignorePatterns === 'string') { state.ignorePatternsRaw = saved.ignorePatterns; els.ignorePatterns.value = saved.ignorePatterns; }
+        if (typeof saved.skipPatterns === 'string') { state.skipPatternsRaw = saved.skipPatterns; els.skipPatterns.value = saved.skipPatterns; }
         if (typeof saved.ignorePanelOpen === 'boolean') state.ignorePanelOpen = saved.ignorePanelOpen;
         if (typeof saved.ignorePatternsEnabled === 'boolean') state.ignorePatternsEnabled = saved.ignorePatternsEnabled;
         if (typeof saved.ignoreWhitespace === 'boolean') state.ignoreWhitespace = saved.ignoreWhitespace;
@@ -603,29 +662,61 @@
     }
     function flattenStructured(value, patternInfo, path = '$', entries = []) {
       if (Array.isArray(value)) {
-        if (!value.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '[]', compareValueText: '[]', fullText: `${path}: []` });
+        if (!value.length) entries.push({ id: path, keyText: path, prefixText: `${path}: `, valueText: '[]', compareValueText: '[]', fullText: `${path}: []` });
         value.forEach((item, index) => flattenStructured(item, patternInfo, `${path}[${index}]`, entries));
         return entries;
       }
       if (value && typeof value === 'object') {
         const keys = Object.keys(value).sort();
-        if (!keys.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '{}', compareValueText: '{}', fullText: `${path}: {}` });
+        if (!keys.length) entries.push({ id: path, keyText: path, prefixText: `${path}: `, valueText: '{}', compareValueText: '{}', fullText: `${path}: {}` });
         keys.forEach(key => flattenStructured(value[key], patternInfo, `${path}.${key}`, entries));
         return entries;
       }
       const valueText = stringifyStable(value);
       const compareValueText = buildCompareText(valueText, patternInfo);
-      entries.push({ id: path, prefixText: `${path}: `, valueText, compareValueText, fullText: `${path}: ${valueText}` });
+      entries.push({ id: path, keyText: path, prefixText: `${path}: `, valueText, compareValueText, fullText: `${path}: ${valueText}` });
       return entries;
     }
     function parseEnvEntries(text) {
       const lines = normalizeLines(text), counts = Object.create(null); let rawIndex = 0;
       return lines.map(line => {
-        const match = line.match(/^\s*(?:export\s+)?([^=\s#;]+)\s*=(.*)$/);
-        if (!match) return { id: `__raw__:${++rawIndex}`, prefixText: '', valueText: line, compareValueText: line, fullText: line };
-        const key = match[1]; counts[key] = (counts[key] || 0) + 1;
-        const prefixText = counts[key] > 1 ? `${key} [${counts[key]}]=` : `${key}=`;
-        return { id: `key:${key}#${counts[key]}`, prefixText, valueText: match[2], compareValueText: match[2], fullText: `${prefixText}${match[2]}` };
+        const match = line.match(/^\s*((?:export\s+)?)([^=\s#;]+)(\s*=)(.*)$/);
+        if (!match) return { id: `__raw__:${++rawIndex}`, rawLine: line, keyText: '', prefixText: '', valueText: line, compareValueText: line, fullText: line };
+        const exportPrefix = match[1] || '';
+        const key = match[2];
+        const equalsText = match[3] || '=';
+        const valueText = match[4] || '';
+        const keyPrefix = `${exportPrefix}${key}`;
+        counts[key] = (counts[key] || 0) + 1;
+        const prefixText = counts[key] > 1 ? `${keyPrefix} [${counts[key]}]${equalsText}` : `${keyPrefix}${equalsText}`;
+        return { id: `key:${key}#${counts[key]}`, rawLine: line, keyText: key, prefixText, valueText, compareValueText: valueText, fullText: line };
+      });
+    }
+    function entryMatchesSkipPattern(item, skipPatternInfo) {
+      return shouldSkipText(item.rawLine || '', skipPatternInfo)
+        || shouldSkipText(item.keyText || '', skipPatternInfo)
+        || shouldSkipText(item.prefixText || '', skipPatternInfo)
+        || shouldSkipText(item.valueText || '', skipPatternInfo)
+        || shouldSkipText(item.fullText || '', skipPatternInfo);
+    }
+    function filterEntriesBySkipPatterns(entries, skipPatternInfo) {
+      if (!skipPatternInfo.compiled.length) return entries;
+      return entries.filter(item => !entryMatchesSkipPattern(item, skipPatternInfo));
+    }
+    function isTrimmableEnvSeparatorEntry(item) {
+      if (item.keyText) return false;
+      const text = (item.rawLine ?? item.fullText ?? '').trim();
+      return text === '' || text.startsWith('#') || text.startsWith(';');
+    }
+    function pruneEnvSeparatorsAroundSkipped(entries, skipPatternInfo) {
+      if (!skipPatternInfo.compiled.length) return entries;
+      const skipFlags = entries.map(item => entryMatchesSkipPattern(item, skipPatternInfo));
+      return entries.filter((item, index) => {
+        if (skipFlags[index]) return false;
+        if (!isTrimmableEnvSeparatorEntry(item)) return true;
+        const prevSkipped = index > 0 && skipFlags[index - 1];
+        const nextSkipped = index < entries.length - 1 && skipFlags[index + 1];
+        return !prevSkipped && !nextSkipped;
       });
     }
     function mergeIds(leftEntries, rightEntries) {
@@ -675,8 +766,9 @@
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
-    function buildTextDiff(leftText, rightText, patternInfo) {
-      const leftLines = normalizeLines(leftText).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), rightLines = normalizeLines(rightText).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
+    function buildTextDiff(leftText, rightText, patternInfo, skipPatternInfo) {
+      const leftSourceLines = normalizeLines(leftText), rightSourceLines = normalizeLines(rightText);
+      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
@@ -714,12 +806,13 @@
         else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: renderVisibleText(row.leftText), text: row.leftText });
         else unified.push({ sign: '+', kind: 'added', html: renderVisibleText(row.rightText), text: row.rightText });
       }
-      return { rows, unified, stats: { same, added, removed, changed } };
+      return { rows, unified, stats: { same, added, removed, changed }, diagnostics: { source: 'text', skipped: { left: leftSourceLines.length - leftLines.length, right: rightSourceLines.length - rightLines.length } } };
     }
-    function buildLogDiff(leftText, rightText, patternInfo) {
+    function buildLogDiff(leftText, rightText, patternInfo, skipPatternInfo) {
       const inlinePatternInfo = buildLogInlinePatternInfo(patternInfo);
-      const leftLines = normalizeLines(leftText).map(line => buildLogLineInfo(line, patternInfo));
-      const rightLines = normalizeLines(rightText).map(line => buildLogLineInfo(line, patternInfo));
+      const leftSourceLines = normalizeLines(leftText), rightSourceLines = normalizeLines(rightText);
+      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, patternInfo));
+      const rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, patternInfo));
       const raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare);
       const rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
@@ -764,17 +857,28 @@
         } else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: renderVisibleText(row.leftText), text: row.leftText });
         else unified.push({ sign: '+', kind: 'added', html: renderVisibleText(row.rightText), text: row.rightText });
       }
-      return { rows, unified, stats: { same, added, removed, changed } };
+      return { rows, unified, stats: { same, added, removed, changed }, diagnostics: { source: 'log', skipped: { left: leftSourceLines.length - leftLines.length, right: rightSourceLines.length - rightLines.length } } };
     }
-    function buildEnvDiff(leftText, rightText, patternInfo) {
+    function buildEnvDiff(leftText, rightText, patternInfo, skipPatternInfo) {
+      const leftEntries = pruneEnvSeparatorsAroundSkipped(parseEnvEntries(leftText), skipPatternInfo), rightEntries = pruneEnvSeparatorsAroundSkipped(parseEnvEntries(rightText), skipPatternInfo);
       const normalizeEntries = entries => entries.map(item => {
         const valueText = item.valueText || '';
         const compareValueText = buildCompareText(valueText, patternInfo);
-        return { ...item, valueText, compareValueText, fullText: `${item.prefixText || ''}${valueText}` };
+        return { ...item, valueText, compareValueText, fullText: item.rawLine || `${item.prefixText || ''}${valueText}` };
       });
-      return buildRowsFromEntries(normalizeEntries(parseEnvEntries(leftText)), normalizeEntries(parseEnvEntries(rightText)), patternInfo);
+      const filteredLeftEntries = filterEntriesBySkipPatterns(normalizeEntries(leftEntries), skipPatternInfo);
+      const filteredRightEntries = filterEntriesBySkipPatterns(normalizeEntries(rightEntries), skipPatternInfo);
+      const data = buildRowsFromEntries(filteredLeftEntries, filteredRightEntries, patternInfo);
+      data.diagnostics = { source: 'env', skipped: { left: leftEntries.length - filteredLeftEntries.length, right: rightEntries.length - filteredRightEntries.length } };
+      return data;
     }
-    function buildStructuredObjectDiff(leftObj, rightObj, patternInfo) { return buildRowsFromEntries(flattenStructured(leftObj, patternInfo), flattenStructured(rightObj, patternInfo), patternInfo); }
+    function buildStructuredObjectDiff(leftObj, rightObj, patternInfo, skipPatternInfo) {
+      const leftEntries = flattenStructured(leftObj, patternInfo), rightEntries = flattenStructured(rightObj, patternInfo);
+      const filteredLeftEntries = filterEntriesBySkipPatterns(leftEntries, skipPatternInfo), filteredRightEntries = filterEntriesBySkipPatterns(rightEntries, skipPatternInfo);
+      const data = buildRowsFromEntries(filteredLeftEntries, filteredRightEntries, patternInfo);
+      data.diagnostics = { source: 'structured', skipped: { left: leftEntries.length - filteredLeftEntries.length, right: rightEntries.length - filteredRightEntries.length } };
+      return data;
+    }
     function renderDiff(data) {
       const leftHead = escapeHtml(state.leftName || 'left.txt'), rightHead = escapeHtml(state.rightName || 'right.txt');
       const sideRows = data.rows.map(row => {
@@ -803,6 +907,7 @@
     }
     function buildExportHtml(data) {
       const patternInfo = buildIgnorePatternInfo();
+      const skipPatternInfo = buildSkipPatternInfo();
       const unifiedRows = data.unified.map(item => {
         let cls = '';
         if (item.sign === '+') cls = item.kind === 'changed' ? 'u-change' : 'u-add';
@@ -810,8 +915,11 @@
         else if (item.sign === 'meta') cls = 'u-meta';
         return `<div class="u-line ${cls}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
       }).join('');
-      const ignoreMeta = patternInfo.compiled.length ? `Ignore patterns: ${escapeHtml(patternInfo.compiled.map(item => item.source).join(' | '))}<br />` : '';
-      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#ecfdf5;--change-bg:#fffbeb;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-change .u-code{background:var(--change-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fde68a;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />${ignoreMeta}View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
+      const ignoreMeta = patternInfo.compiled.length ? `Ignore-in-values: ${escapeHtml(patternInfo.compiled.map(item => item.source).join(' | '))}<br />` : 'Ignore-in-values: none<br />';
+      const skipMeta = skipPatternInfo.compiled.length ? `Skip-lines: ${escapeHtml(skipPatternInfo.compiled.map(item => item.source).join(' | '))}<br />` : 'Skip-lines: none<br />';
+      const enabledMeta = `Patterns enabled: ${state.ignorePatternsEnabled ? 'yes' : 'no'}<br />`;
+      const skippedMeta = data.diagnostics?.skipped ? `Skipped rows: left ${data.diagnostics.skipped.left}, right ${data.diagnostics.skipped.right}<br />` : '';
+      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#ecfdf5;--change-bg:#fffbeb;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-change .u-code{background:var(--change-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fde68a;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />${enabledMeta}${ignoreMeta}${skipMeta}${skippedMeta}View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
     }
     function downloadUnifiedHtml() {
       if (!state.diffData) return;
@@ -828,19 +936,30 @@
       const left = els.leftText.value, right = els.rightText.value;
       state.compareMode = els.compareMode.value;
       const patternInfo = buildIgnorePatternInfo();
-      updateIgnoreMeta(patternInfo);
+      const skipPatternInfo = buildSkipPatternInfo();
+      updateIgnoreMeta(patternInfo, skipPatternInfo);
       try {
         let data;
-        if (state.compareMode === 'env') data = buildEnvDiff(left, right, patternInfo);
-        else if (state.compareMode === 'log') data = buildLogDiff(left, right, patternInfo);
-        else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right), patternInfo);
-        else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right), patternInfo);
-        else data = buildTextDiff(left, right, patternInfo);
+        if (state.compareMode === 'env') data = buildEnvDiff(left, right, patternInfo, skipPatternInfo);
+        else if (state.compareMode === 'log') data = buildLogDiff(left, right, patternInfo, skipPatternInfo);
+        else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right), patternInfo, skipPatternInfo);
+        else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right), patternInfo, skipPatternInfo);
+        else data = buildTextDiff(left, right, patternInfo, skipPatternInfo);
         state.diffData = data;
+        state.diagnostics = data.diagnostics || null;
+        console.info('[Diff viewer]', {
+          compareMode: state.compareMode,
+          patternsEnabled: state.ignorePatternsEnabled,
+          ignorePatterns: patternInfo.compiled.map(item => item.source),
+          skipPatterns: skipPatternInfo.compiled.map(item => item.source),
+          diagnostics: state.diagnostics
+        });
+        updateIgnoreMeta(patternInfo, skipPatternInfo);
         renderDiff(data);
         els.downloadBtn.disabled = false;
         scheduleSave();
       } catch (error) {
+        state.diagnostics = null;
         renderError(`${state.compareMode.toUpperCase()} compare error: ${error.message}`);
         scheduleSave();
       }
@@ -941,11 +1060,12 @@
     }
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
-      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false;
+      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false; state.diagnostics = null;
       els.compareMode.value = 'text'; els.leftName.textContent = '-'; els.rightName.textContent = '-'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
       els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div>';
       els.stats.innerHTML = `<span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span>`;
       els.ignorePatterns.value = '';
+      els.skipPatterns.value = '';
       els.ignoreMeta.textContent = 'No ignore patterns';
       els.downloadBtn.disabled = true;
       updateIgnorePanelVisibility();
@@ -990,7 +1110,8 @@
     els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; computeDiff(); });
     els.leftText.addEventListener('input', scheduleSave);
     els.rightText.addEventListener('input', scheduleSave);
-    els.ignorePatterns.addEventListener('input', () => { state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); computeDiff(); });
+    els.ignorePatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); computeDiff(); });
+    els.skipPatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.skipPatternsRaw = els.skipPatterns.value; scheduleSave(); computeDiff(); });
     attachDropZone(els.leftDrop, els.leftFile, 'left');
     attachDropZone(els.rightDrop, els.rightFile, 'right');
     restoreState();

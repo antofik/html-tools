@@ -85,3 +85,26 @@ This repository contains arbitrary tools that:
 ### Candidate Tools
 
 The following tools are planned candidates and are **not implemented yet**. These descriptions are drafts and should be adjusted before development.
+
+- **Log Viewer** (`log_viewer.html`)
+  - Loads a single local log file or accepts pasted log text directly.
+  - Is intended for offline inspection of large backend and browser logs in a browser-only workflow.
+  - Parses common application log shapes such as:
+    - timestamp-prefixed logs
+    - Spring Boot / Java logs with level, PID, thread, and logger name
+    - browser console style logs
+    - multiline stack traces
+  - Presents logs as structured rows rather than a single raw text block.
+  - Supports filtering by log level such as `TRACE`, `DEBUG`, `INFO`, `WARN`, and `ERROR`.
+  - Supports free-text and regex search across the visible log content.
+  - Supports quick extraction and filtering by common operational fields when present:
+    - timestamp
+    - thread name
+    - logger/class name
+    - request ID / trace ID / correlation ID
+  - Groups multiline stack traces and continuation lines under the originating log entry.
+  - Supports collapsing and expanding stack traces and other multiline entries.
+  - Highlights log levels with distinct colors while preserving a light theme.
+  - Supports timestamp-aware sorting and time-range filtering when timestamps can be parsed.
+  - Supports copying or exporting the currently filtered subset of logs.
+  - Persists loaded text, active filters, search text, collapsed state, and UI settings in `localStorage`.
