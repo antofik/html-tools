@@ -16,9 +16,10 @@
       --button-hover: #f8fafc;
       --button-active: #f1f5f9;
       --add-bg: #ecfdf5;
-      --del-bg: #fef2f2;
+      --del-bg: #ecfdf5;
+      --change-bg: #fffbeb;
       --add-strong: #bbf7d0;
-      --del-strong: #fecaca;
+      --del-strong: #fde68a;
       --same-bg: #ffffff;
       --meta-bg: #eff6ff;
       --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
@@ -36,6 +37,9 @@
     .control-group { display: grid; gap: 6px; align-content: start; }
     .control-label { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; padding-left: 2px; }
     .inputs { grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
+    .ignore-panel { margin-bottom: 18px; display: none; }
+    .ignore-panel.open { display: block; }
+    .ignore-editor { min-height: 96px; max-height: 180px; margin-top: 0; }
     .panel { background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fafafa; }
     .panel-title { font-weight: 700; font-size: 14px; letter-spacing: .02em; color: #374151; }
@@ -50,6 +54,11 @@
     button:hover, select:hover, .segmented button:hover { background: var(--button-hover); }
     button:disabled { opacity: .5; cursor: not-allowed; }
     .icon-btn { width: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+    .icon-btn.with-badge { position: relative; overflow: visible; }
+    .icon-badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #22c55e; color: #f0fdf4; font-size: 10px; line-height: 18px; font-weight: 600; text-align: center; box-shadow: 0 0 0 2px #ffffff; display: none; }
+    .icon-badge.inactive { background: #94a3b8; color: #f8fafc; }
+    .inline-toggle { min-height: 36px; padding: 8px 12px; font-size: 12px; border-radius: 10px; }
+    .icon-badge.visible { display: inline-block; }
     .icon-btn .btn-content,
     .segmented .icon-btn .btn-content { gap: 0; }
     .btn-text { display: none; }
@@ -78,6 +87,7 @@
     .same .code { background: var(--same-bg); }
     .add .code { background: var(--add-bg); }
     .del .code { background: var(--del-bg); }
+    .changed .code { background: var(--change-bg); }
     .placeholder .code { color: #cbd5e1; background: #fff; }
     .seg-add { background: var(--add-strong); border-radius: 3px; }
     .seg-del { background: var(--del-strong); border-radius: 3px; }
@@ -87,6 +97,7 @@
     .u-code { padding: 6px 10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
     .u-add .u-code { background: var(--add-bg); }
     .u-del .u-code { background: var(--del-bg); }
+    .u-change .u-code { background: var(--change-bg); }
     .u-meta .u-code { color: #2563eb; background: var(--meta-bg); }
     .empty { padding: 32px 18px; color: var(--muted); }
     .error-box { padding: 18px; border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #991b1b; line-height: 1.45; }
@@ -115,6 +126,7 @@
       </div>
       <button id="computeBtn" class="icon-btn primary-run" type="button" title="Generate diff" aria-label="Generate diff"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 8v8l6-4z"/></svg></span><span class="btn-text">Generate diff</span></span></button>
       <button id="downloadBtn" class="icon-btn" type="button" title="Download unified diff HTML" aria-label="Download unified diff HTML" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="btn-text">Download unified diff HTML</span></span></button>
+      <button id="toggleIgnoreBtn" class="icon-btn with-badge" type="button" title="Ignore patterns" aria-label="Ignore patterns" aria-expanded="false" aria-controls="ignorePanel"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="btn-text">Ignore patterns</span></span><span id="ignoreBadge" class="icon-badge" aria-hidden="true">0</span></button>
       <button id="swapBtn" class="icon-btn" type="button" title="Swap sides" aria-label="Swap sides"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></svg></span><span class="btn-text">Swap sides</span></span></button>
       <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="btn-text">Clear</span></span></button>
       <div class="segmented" aria-label="Diff view mode">
@@ -123,33 +135,45 @@
       </div>
     </div>
     </div>
+    <div id="ignorePanel" class="panel ignore-panel">
+      <div class="panel-header"><div class="panel-title">Ignore Patterns</div><div style="display:flex;align-items:center;gap:10px;"><button id="toggleIgnoreActiveBtn" class="inline-toggle" type="button">Patterns on</button><div class="small" id="ignoreMeta">No ignore patterns</div></div></div>
+      <div class="panel-body">
+        <textarea id="ignorePatterns" class="preview ignore-editor" spellcheck="false" placeholder="One regex per line. Example: \d+\.\d+\.\d+\.\d+"></textarea>
+      </div>
+    </div>
     <div class="inputs">
       <div class="panel">
         <div class="panel-header"><div class="panel-title">Left file</div><div class="small" id="leftMeta">not loaded</div></div>
         <div class="panel-body">
-          <div class="dropzone" id="leftDrop"><input id="leftFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="leftName">—</div></div>
+          <div class="dropzone" id="leftDrop"><input id="leftFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="leftName">-</div></div>
           <textarea id="leftText" class="preview" spellcheck="false" placeholder="Left file content"></textarea>
         </div>
       </div>
       <div class="panel">
         <div class="panel-header"><div class="panel-title">Right file</div><div class="small" id="rightMeta">not loaded</div></div>
         <div class="panel-body">
-          <div class="dropzone" id="rightDrop"><input id="rightFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="rightName">—</div></div>
+          <div class="dropzone" id="rightDrop"><input id="rightFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="rightName">-</div></div>
           <textarea id="rightText" class="preview" spellcheck="false" placeholder="Right file content"></textarea>
         </div>
       </div>
     </div>
     <div class="panel">
       <div class="panel-header"><div class="panel-title">Result</div><div class="stats" id="stats"><span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span></div></div>
-      <div id="resultBody" class="panel-body"><div class="empty">Nothing to show yet. Load two files and click “Generate diff”.</div></div>
+      <div id="resultBody" class="panel-body"><div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div></div>
     </div>
   </div>
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
-    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', saveTimer: null };
+    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, saveTimer: null };
     const els = {
       compareMode: document.getElementById('compareMode'),
+      ignorePanel: document.getElementById('ignorePanel'),
+      toggleIgnoreBtn: document.getElementById('toggleIgnoreBtn'),
+      toggleIgnoreActiveBtn: document.getElementById('toggleIgnoreActiveBtn'),
+      ignoreBadge: document.getElementById('ignoreBadge'),
+      ignorePatterns: document.getElementById('ignorePatterns'),
+      ignoreMeta: document.getElementById('ignoreMeta'),
       leftFile: document.getElementById('leftFile'),
       rightFile: document.getElementById('rightFile'),
       leftText: document.getElementById('leftText'),
@@ -171,6 +195,115 @@
     };
     function escapeHtml(s) { return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
     function normalizeLines(text) { return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n'); }
+    function buildIgnorePatternInfo() {
+      if (!state.ignorePatternsEnabled) return { compiled: [], warnings: [], storedCount: normalizeLines(els.ignorePatterns.value || '').map(line => line.trim()).filter(Boolean).length, enabled: false };
+      const lines = normalizeLines(els.ignorePatterns.value || '');
+      const compiled = [];
+      const warnings = [];
+      for (let index = 0; index < lines.length; index++) {
+        const raw = lines[index].trim();
+        if (!raw) continue;
+        let regex;
+        try {
+          const slashMatch = raw.match(/^\/(.+)\/([a-z]*)$/i);
+          if (slashMatch) {
+            let flags = slashMatch[2] || '';
+            if (!flags.includes('g')) flags += 'g';
+            regex = new RegExp(slashMatch[1], flags);
+          } else {
+            regex = new RegExp(raw, 'gu');
+          }
+          regex.lastIndex = 0;
+          if (regex.test('')) {
+            warnings.push(`Line ${index + 1}: pattern matches empty string and was skipped`);
+            continue;
+          }
+          compiled.push({ regex, token: `[ignored:${compiled.length + 1}]`, source: raw });
+        } catch (error) {
+          warnings.push(`Line ${index + 1}: ${error.message}`);
+        }
+      }
+      return { compiled, warnings, storedCount: compiled.length, enabled: true };
+    }
+    function applyIgnorePatterns(text, patternInfo) {
+      let out = text;
+      for (const entry of patternInfo.compiled) {
+        entry.regex.lastIndex = 0;
+        out = out.replace(entry.regex, entry.token);
+      }
+      return out;
+    }
+    function buildIgnoredSegments(text, patternInfo) {
+      let segments = [{ ignored: false, raw: text, compare: text }];
+      for (const entry of patternInfo.compiled) {
+        const next = [];
+        for (const segment of segments) {
+          if (segment.ignored || !segment.raw) {
+            next.push(segment);
+            continue;
+          }
+          entry.regex.lastIndex = 0;
+          let cursor = 0;
+          let match;
+          while ((match = entry.regex.exec(segment.raw)) !== null) {
+            const matchedText = match[0];
+            if (!matchedText) break;
+            if (match.index > cursor) {
+              const rawText = segment.raw.slice(cursor, match.index);
+              next.push({ ignored: false, raw: rawText, compare: rawText });
+            }
+            next.push({ ignored: true, raw: matchedText, compare: entry.token });
+            cursor = match.index + matchedText.length;
+          }
+          if (cursor < segment.raw.length) {
+            const rawText = segment.raw.slice(cursor);
+            next.push({ ignored: false, raw: rawText, compare: rawText });
+          }
+        }
+        segments = next;
+      }
+      return segments;
+    }
+    function buildInlineDiffUnits(text, patternInfo) {
+      const segments = buildIgnoredSegments(text, patternInfo);
+      const units = [];
+      for (const segment of segments) {
+        if (!segment.raw) continue;
+        if (segment.ignored) {
+          units.push({ kind: 'ignored', raw: segment.raw, compare: segment.compare });
+          continue;
+        }
+        for (const ch of Array.from(segment.raw)) units.push({ kind: 'text', raw: ch, compare: ch });
+      }
+      return units;
+    }
+    function updateIgnoreMeta(patternInfo) {
+      if (!patternInfo.compiled.length && !patternInfo.warnings.length) {
+        const hasStoredPatterns = !patternInfo.enabled && patternInfo.storedCount > 0;
+        els.ignoreMeta.textContent = hasStoredPatterns ? `${patternInfo.storedCount} stored pattern${patternInfo.storedCount === 1 ? '' : 's'}, inactive` : 'No ignore patterns';
+        els.ignoreBadge.textContent = hasStoredPatterns ? String(patternInfo.storedCount) : '0';
+        els.ignoreBadge.classList.toggle('visible', hasStoredPatterns);
+        els.ignoreBadge.classList.toggle('inactive', hasStoredPatterns);
+        return;
+      }
+      if (patternInfo.warnings.length) {
+        els.ignoreMeta.textContent = `${patternInfo.compiled.length} active, ${patternInfo.warnings.length} invalid`;
+      } else {
+        els.ignoreMeta.textContent = `${patternInfo.compiled.length} active pattern${patternInfo.compiled.length === 1 ? '' : 's'}`;
+      }
+      els.ignoreBadge.textContent = String(patternInfo.compiled.length);
+      els.ignoreBadge.classList.toggle('visible', patternInfo.compiled.length > 0);
+      els.ignoreBadge.classList.toggle('inactive', !patternInfo.enabled);
+    }
+    function updateIgnorePanelVisibility() {
+      els.ignorePanel.classList.toggle('open', state.ignorePanelOpen);
+      els.toggleIgnoreBtn.classList.toggle('active', state.ignorePanelOpen);
+      els.toggleIgnoreBtn.setAttribute('aria-expanded', state.ignorePanelOpen ? 'true' : 'false');
+    }
+    function updateIgnoreEnabledButton() {
+      els.toggleIgnoreActiveBtn.textContent = state.ignorePatternsEnabled ? 'Patterns on' : 'Patterns off';
+      els.toggleIgnoreActiveBtn.classList.toggle('active', state.ignorePatternsEnabled);
+    }
     function scheduleSave() {
       clearTimeout(state.saveTimer);
       state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
@@ -184,6 +317,9 @@
           rightName: state.rightName,
           leftMeta: els.leftMeta.textContent,
           rightMeta: els.rightMeta.textContent,
+          ignorePatterns: els.ignorePatterns.value,
+          ignorePanelOpen: state.ignorePanelOpen,
+          ignorePatternsEnabled: state.ignorePatternsEnabled,
           compareMode: state.compareMode,
           viewMode: state.viewMode
         }));
@@ -196,10 +332,13 @@
         const saved = JSON.parse(raw);
         if (typeof saved.leftText === 'string') els.leftText.value = saved.leftText;
         if (typeof saved.rightText === 'string') els.rightText.value = saved.rightText;
-        if (typeof saved.leftName === 'string') { state.leftName = saved.leftName; els.leftName.textContent = saved.leftName || '—'; }
-        if (typeof saved.rightName === 'string') { state.rightName = saved.rightName; els.rightName.textContent = saved.rightName || '—'; }
+        if (typeof saved.leftName === 'string') { state.leftName = saved.leftName; els.leftName.textContent = saved.leftName || '-'; }
+        if (typeof saved.rightName === 'string') { state.rightName = saved.rightName; els.rightName.textContent = saved.rightName || '-'; }
         if (typeof saved.leftMeta === 'string') els.leftMeta.textContent = saved.leftMeta || 'not loaded';
         if (typeof saved.rightMeta === 'string') els.rightMeta.textContent = saved.rightMeta || 'not loaded';
+        if (typeof saved.ignorePatterns === 'string') { state.ignorePatternsRaw = saved.ignorePatterns; els.ignorePatterns.value = saved.ignorePatterns; }
+        if (typeof saved.ignorePanelOpen === 'boolean') state.ignorePanelOpen = saved.ignorePanelOpen;
+        if (typeof saved.ignorePatternsEnabled === 'boolean') state.ignorePatternsEnabled = saved.ignorePatternsEnabled;
         if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
           state.compareMode = saved.compareMode;
           els.compareMode.value = saved.compareMode;
@@ -246,12 +385,24 @@
       while (j < b.length) ops.push({ type: 'insert', b: b[j++] });
       return ops;
     }
-    function diffChars(oldStr, newStr) {
-      const ops = diffArray(Array.from(oldStr), Array.from(newStr)); let left = '', right = '';
+    function diffChars(oldStr, newStr, patternInfo) {
+      const oldUnits = buildInlineDiffUnits(oldStr, patternInfo);
+      const newUnits = buildInlineDiffUnits(newStr, patternInfo);
+      const ops = diffArray(oldUnits, newUnits, (left, right) => left.compare === right.compare);
+      let left = '', right = '';
       for (const op of ops) {
-        if (op.type === 'equal') { const ch = escapeHtml(op.a); left += ch; right += ch; }
-        else if (op.type === 'delete') left += `<span class="seg-del">${escapeHtml(op.a)}</span>`;
-        else right += `<span class="seg-add">${escapeHtml(op.b)}</span>`;
+        if (op.type === 'equal') {
+          const leftText = escapeHtml(op.a.raw);
+          const rightText = escapeHtml(op.b.raw);
+          left += leftText;
+          right += rightText;
+        } else if (op.type === 'delete') {
+          const leftText = escapeHtml(op.a.raw);
+          left += op.a.kind === 'ignored' ? leftText : `<span class="seg-del">${leftText}</span>`;
+        } else {
+          const rightText = escapeHtml(op.b.raw);
+          right += op.b.kind === 'ignored' ? rightText : `<span class="seg-add">${rightText}</span>`;
+        }
       }
       return { left, right };
     }
@@ -354,30 +505,31 @@
       if (index !== lines.length) throw new Error('Could not parse the full YAML document');
       return sortDeep(result);
     }
-    function flattenStructured(value, path = '$', entries = []) {
+    function flattenStructured(value, patternInfo, path = '$', entries = []) {
       if (Array.isArray(value)) {
-        if (!value.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '[]', fullText: `${path}: []` });
-        value.forEach((item, index) => flattenStructured(item, `${path}[${index}]`, entries));
+        if (!value.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '[]', compareValueText: '[]', fullText: `${path}: []` });
+        value.forEach((item, index) => flattenStructured(item, patternInfo, `${path}[${index}]`, entries));
         return entries;
       }
       if (value && typeof value === 'object') {
         const keys = Object.keys(value).sort();
-        if (!keys.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '{}', fullText: `${path}: {}` });
-        keys.forEach(key => flattenStructured(value[key], `${path}.${key}`, entries));
+        if (!keys.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '{}', compareValueText: '{}', fullText: `${path}: {}` });
+        keys.forEach(key => flattenStructured(value[key], patternInfo, `${path}.${key}`, entries));
         return entries;
       }
       const valueText = stringifyStable(value);
-      entries.push({ id: path, prefixText: `${path}: `, valueText, fullText: `${path}: ${valueText}` });
+      const compareValueText = applyIgnorePatterns(valueText, patternInfo);
+      entries.push({ id: path, prefixText: `${path}: `, valueText, compareValueText, fullText: `${path}: ${valueText}` });
       return entries;
     }
     function parseEnvEntries(text) {
       const lines = normalizeLines(text), counts = Object.create(null); let rawIndex = 0;
       return lines.map(line => {
         const match = line.match(/^\s*(?:export\s+)?([^=\s#;]+)\s*=(.*)$/);
-        if (!match) return { id: `__raw__:${++rawIndex}`, prefixText: '', valueText: line, fullText: line };
+        if (!match) return { id: `__raw__:${++rawIndex}`, prefixText: '', valueText: line, compareValueText: line, fullText: line };
         const key = match[1]; counts[key] = (counts[key] || 0) + 1;
         const prefixText = counts[key] > 1 ? `${key} [${counts[key]}]=` : `${key}=`;
-        return { id: `key:${key}#${counts[key]}`, prefixText, valueText: match[2], fullText: `${prefixText}${match[2]}` };
+        return { id: `key:${key}#${counts[key]}`, prefixText, valueText: match[2], compareValueText: match[2], fullText: `${prefixText}${match[2]}` };
       });
     }
     function mergeIds(leftEntries, rightEntries) {
@@ -386,7 +538,7 @@
       for (const item of rightEntries) if (!seen.has(item.id)) { seen.add(item.id); order.push(item.id); }
       return order;
     }
-    function buildRowsFromEntries(leftEntries, rightEntries) {
+    function buildRowsFromEntries(leftEntries, rightEntries, patternInfo) {
       const leftMap = new Map(leftEntries.map(item => [item.id, item]));
       const rightMap = new Map(rightEntries.map(item => [item.id, item]));
       const order = mergeIds(leftEntries, rightEntries), rows = [];
@@ -394,11 +546,13 @@
       for (const id of order) {
         const left = leftMap.get(id), right = rightMap.get(id);
         if (left && right) {
-          if (left.prefixText === right.prefixText && left.valueText === right.valueText) {
+          const leftCompareText = left.compareValueText ?? left.valueText ?? '';
+          const rightCompareText = right.compareValueText ?? right.valueText ?? '';
+          if (left.prefixText === right.prefixText && leftCompareText === rightCompareText) {
             rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(left.fullText), rightHtml: escapeHtml(right.fullText), leftText: left.fullText, rightText: right.fullText });
             same++;
           } else {
-            const intra = diffChars(left.valueText || '', right.valueText || '');
+            const intra = diffChars(left.valueText || '', right.valueText || '', patternInfo);
             rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(left.prefixText || '') + intra.left, rightHtml: escapeHtml(right.prefixText || '') + intra.right, leftText: left.fullText, rightText: right.fullText });
             changed++;
           }
@@ -411,23 +565,26 @@
         }
       }
       const unified = [];
-      unified.push({ sign: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
-      unified.push({ sign: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
-      unified.push({ sign: 'meta', text: `mode: ${state.compareMode}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: `mode: ${state.compareMode}` });
       for (const row of rows) {
-        if (row.kind === 'same') unified.push({ sign: ' ', html: escapeHtml(row.leftText), text: row.leftText });
-        else if (row.kind === 'changed') { unified.push({ sign: '-', html: row.leftHtml, text: row.leftText }); unified.push({ sign: '+', html: row.rightHtml, text: row.rightText }); }
-        else if (row.kind === 'deleted') unified.push({ sign: '-', html: escapeHtml(row.leftText), text: row.leftText });
-        else unified.push({ sign: '+', html: escapeHtml(row.rightText), text: row.rightText });
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: escapeHtml(row.leftText), text: row.leftText });
+        else if (row.kind === 'changed') {
+          unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
+          unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
+        }
+        else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: escapeHtml(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: escapeHtml(row.rightText), text: row.rightText });
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
-    function buildTextDiff(leftText, rightText) {
-      const leftLines = normalizeLines(leftText), rightLines = normalizeLines(rightText), raw = diffArray(leftLines, rightLines), rows = [];
+    function buildTextDiff(leftText, rightText, patternInfo) {
+      const leftLines = normalizeLines(leftText).map(line => ({ raw: line, compare: applyIgnorePatterns(line, patternInfo) })), rightLines = normalizeLines(rightText).map(line => ({ raw: line, compare: applyIgnorePatterns(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
-          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(raw[i].a), rightHtml: escapeHtml(raw[i].b), leftText: raw[i].a, rightText: raw[i].b });
+          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(raw[i].a.raw), rightHtml: escapeHtml(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
           same++; i++; continue;
         }
         const dels = [], ins = [];
@@ -436,42 +593,54 @@
         for (let k = 0; k < pairCount; k++) {
           const dl = dels[k], il = ins[k];
           if (dl != null && il != null) {
-            const intra = diffChars(dl, il);
-            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl, rightText: il });
+            const intra = diffChars(dl.raw, il.raw, patternInfo);
+            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl.raw, rightText: il.raw });
             changed++;
           } else if (dl != null) {
-            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(dl), rightHtml: '', leftText: dl, rightText: '' });
+            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(dl.raw), rightHtml: '', leftText: dl.raw, rightText: '' });
             removed++;
           } else if (il != null) {
-            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(il), leftText: '', rightText: il });
+            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(il.raw), leftText: '', rightText: il.raw });
             added++;
           }
         }
       }
       const unified = [];
-      unified.push({ sign: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
-      unified.push({ sign: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
-      unified.push({ sign: 'meta', text: 'mode: text' });
+      unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: 'mode: text' });
       for (const row of rows) {
-        if (row.kind === 'same') unified.push({ sign: ' ', html: escapeHtml(row.leftText), text: row.leftText });
-        else if (row.kind === 'changed') { unified.push({ sign: '-', html: row.leftHtml, text: row.leftText }); unified.push({ sign: '+', html: row.rightHtml, text: row.rightText }); }
-        else if (row.kind === 'deleted') unified.push({ sign: '-', html: escapeHtml(row.leftText), text: row.leftText });
-        else unified.push({ sign: '+', html: escapeHtml(row.rightText), text: row.rightText });
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: escapeHtml(row.leftText), text: row.leftText });
+        else if (row.kind === 'changed') {
+          unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
+          unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
+        }
+        else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: escapeHtml(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: escapeHtml(row.rightText), text: row.rightText });
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
-    function buildEnvDiff(leftText, rightText) { return buildRowsFromEntries(parseEnvEntries(leftText), parseEnvEntries(rightText)); }
-    function buildStructuredObjectDiff(leftObj, rightObj) { return buildRowsFromEntries(flattenStructured(leftObj), flattenStructured(rightObj)); }
+    function buildEnvDiff(leftText, rightText, patternInfo) {
+      const normalizeEntries = entries => entries.map(item => {
+        const valueText = item.valueText || '';
+        const compareValueText = applyIgnorePatterns(valueText, patternInfo);
+        return { ...item, valueText, compareValueText, fullText: `${item.prefixText || ''}${valueText}` };
+      });
+      return buildRowsFromEntries(normalizeEntries(parseEnvEntries(leftText)), normalizeEntries(parseEnvEntries(rightText)), patternInfo);
+    }
+    function buildStructuredObjectDiff(leftObj, rightObj, patternInfo) { return buildRowsFromEntries(flattenStructured(leftObj, patternInfo), flattenStructured(rightObj, patternInfo), patternInfo); }
     function renderDiff(data) {
       const leftHead = escapeHtml(state.leftName || 'left.txt'), rightHead = escapeHtml(state.rightName || 'right.txt');
       const sideRows = data.rows.map(row => {
-        const leftClass = row.kind === 'added' ? 'placeholder' : (row.kind === 'deleted' || row.kind === 'changed' ? 'del' : 'same');
-        const rightClass = row.kind === 'deleted' ? 'placeholder' : (row.kind === 'added' || row.kind === 'changed' ? 'add' : 'same');
+        const leftClass = row.kind === 'added' ? 'placeholder' : (row.kind === 'deleted' ? 'del' : (row.kind === 'changed' ? 'changed' : 'same'));
+        const rightClass = row.kind === 'deleted' ? 'placeholder' : (row.kind === 'added' ? 'add' : (row.kind === 'changed' ? 'changed' : 'same'));
         return `<div class="diff-row"><div class="half ${leftClass}"><div class="ln">${row.leftNo || ''}</div><div class="code">${row.leftHtml || ''}</div></div><div class="half ${rightClass}"><div class="ln">${row.rightNo || ''}</div><div class="code">${row.rightHtml || ''}</div></div></div>`;
       }).join('');
       const unifiedRows = data.unified.map(item => {
         let cls = '';
-        if (item.sign === '+') cls = 'u-add'; else if (item.sign === '-') cls = 'u-del'; else if (item.sign === 'meta') cls = 'u-meta';
+        if (item.sign === '+') cls = item.kind === 'changed' ? 'u-change' : 'u-add';
+        else if (item.sign === '-') cls = item.kind === 'changed' ? 'u-change' : 'u-del';
+        else if (item.sign === 'meta') cls = 'u-meta';
         return `<div class="u-line ${cls}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
       }).join('');
       els.resultBody.innerHTML = `<div id="sideView" class="view-block ${state.viewMode === 'side' ? 'active' : ''}"><div class="side-by-side"><div class="side-head"><div class="col-head">${leftHead}</div><div class="col-head">${rightHead}</div></div>${sideRows}</div></div><div id="unifiedView" class="view-block ${state.viewMode === 'unified' ? 'active' : ''}"><div class="unified-box"><div class="col-head">Unified diff</div>${unifiedRows}</div></div>`;
@@ -486,12 +655,16 @@
       updateViewButtons();
     }
     function buildExportHtml(data) {
+      const patternInfo = buildIgnorePatternInfo();
       const unifiedRows = data.unified.map(item => {
         let cls = '';
-        if (item.sign === '+') cls = 'u-add'; else if (item.sign === '-') cls = 'u-del'; else if (item.sign === 'meta') cls = 'u-meta';
+        if (item.sign === '+') cls = item.kind === 'changed' ? 'u-change' : 'u-add';
+        else if (item.sign === '-') cls = item.kind === 'changed' ? 'u-change' : 'u-del';
+        else if (item.sign === 'meta') cls = 'u-meta';
         return `<div class="u-line ${cls}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
       }).join('');
-      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#fef2f2;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fecaca;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
+      const ignoreMeta = patternInfo.compiled.length ? `Ignore patterns: ${escapeHtml(patternInfo.compiled.map(item => item.source).join(' | '))}<br />` : '';
+      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#ecfdf5;--change-bg:#fffbeb;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-change .u-code{background:var(--change-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fde68a;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />${ignoreMeta}View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
     }
     function downloadUnifiedHtml() {
       if (!state.diffData) return;
@@ -507,12 +680,14 @@
     function computeDiff() {
       const left = els.leftText.value, right = els.rightText.value;
       state.compareMode = els.compareMode.value;
+      const patternInfo = buildIgnorePatternInfo();
+      updateIgnoreMeta(patternInfo);
       try {
         let data;
-        if (state.compareMode === 'env') data = buildEnvDiff(left, right);
-        else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right));
-        else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right));
-        else data = buildTextDiff(left, right);
+        if (state.compareMode === 'env') data = buildEnvDiff(left, right, patternInfo);
+        else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right), patternInfo);
+        else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right), patternInfo);
+        else data = buildTextDiff(left, right, patternInfo);
         state.diffData = data;
         renderDiff(data);
         els.downloadBtn.disabled = false;
@@ -536,21 +711,35 @@
     }
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
-      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text';
-      els.compareMode.value = 'text'; els.leftName.textContent = '—'; els.rightName.textContent = '—'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
-      els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Load two files and click “Generate diff”.</div>';
+      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true;
+      els.compareMode.value = 'text'; els.leftName.textContent = '-'; els.rightName.textContent = '-'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
+      els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div>';
       els.stats.innerHTML = `<span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span>`;
+      els.ignorePatterns.value = '';
+      els.ignoreMeta.textContent = 'No ignore patterns';
       els.downloadBtn.disabled = true;
+      updateIgnorePanelVisibility();
+      updateIgnoreEnabledButton();
       updateViewButtons();
       scheduleSave();
     }
     els.computeBtn.addEventListener('click', computeDiff);
     els.downloadBtn.addEventListener('click', downloadUnifiedHtml);
+    els.toggleIgnoreBtn.addEventListener('click', () => {
+      state.ignorePanelOpen = !state.ignorePanelOpen;
+      updateIgnorePanelVisibility();
+      scheduleSave();
+    });
+    els.toggleIgnoreActiveBtn.addEventListener('click', () => {
+      state.ignorePatternsEnabled = !state.ignorePatternsEnabled;
+      updateIgnoreEnabledButton();
+      computeDiff();
+    });
     els.swapBtn.addEventListener('click', () => {
       [els.leftText.value, els.rightText.value] = [els.rightText.value, els.leftText.value];
       [state.leftName, state.rightName] = [state.rightName, state.leftName];
-      els.leftName.textContent = state.leftName || '—';
-      els.rightName.textContent = state.rightName || '—';
+      els.leftName.textContent = state.leftName || '-';
+      els.rightName.textContent = state.rightName || '-';
       computeDiff();
     });
     els.clearBtn.addEventListener('click', clearAll);
@@ -559,9 +748,12 @@
     els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; computeDiff(); });
     els.leftText.addEventListener('input', scheduleSave);
     els.rightText.addEventListener('input', scheduleSave);
+    els.ignorePatterns.addEventListener('input', () => { state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); computeDiff(); });
     attachDropZone(els.leftDrop, els.leftFile, 'left');
     attachDropZone(els.rightDrop, els.rightFile, 'right');
     restoreState();
+    updateIgnorePanelVisibility();
+    updateIgnoreEnabledButton();
     updateViewButtons();
     if (els.leftText.value || els.rightText.value) computeDiff();
     window.addEventListener('beforeunload', saveStateNow);
