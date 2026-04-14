@@ -61,6 +61,8 @@
     .icon-badge.inactive { background: #94a3b8; color: #f8fafc; }
     .inline-toggle { min-height: 36px; padding: 8px 12px; font-size: 12px; border-radius: 10px; }
     .icon-badge.visible { display: inline-block; }
+    .icon-btn.active,
+    .inline-toggle.active { border-color: #22c55e; color: #15803d; background: #f0fdf4; }
     .icon-btn .btn-content,
     .segmented .icon-btn .btn-content { gap: 0; }
     .btn-text { display: none; }
@@ -94,6 +96,8 @@
     .half + .half { border-left: 1px solid var(--border); }
     .ln { user-select: none; color: #94a3b8; border-right: 1px solid #f1f5f9; padding: 6px 10px; text-align: right; white-space: nowrap; background: #fff; }
     .code { padding: 6px 10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; min-height: 31px; height: 100%; }
+    .ws-glyph { color: #94a3b8; user-select: none; }
+    .ws-glyph.tab { letter-spacing: -0.04em; }
     .same .code { background: var(--same-bg); }
     .add .code { background: var(--add-bg); }
     .del .code { background: var(--del-bg); }
@@ -138,6 +142,8 @@
       </div>
       <button id="computeBtn" class="icon-btn primary-run" type="button" title="Generate diff" aria-label="Generate diff"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 8v8l6-4z"/></svg></span><span class="btn-text">Generate diff</span></span></button>
       <button id="downloadBtn" class="icon-btn" type="button" title="Download unified diff HTML" aria-label="Download unified diff HTML" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="btn-text">Download unified diff HTML</span></span></button>
+      <button id="toggleWhitespaceBtn" class="icon-btn" type="button" title="Ignore whitespace mismatches" aria-label="Ignore whitespace mismatches"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h16"/><path d="M4 12h10"/><path d="M4 16h16"/></svg></span><span class="btn-text">Ignore whitespace mismatches</span></span></button>
+      <button id="toggleInvisibleBtn" class="icon-btn" type="button" title="Visualize invisible characters" aria-label="Visualize invisible characters"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7s5.8 1.9 8 5.7c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="btn-text">Visualize invisible characters</span></span></button>
       <button id="toggleIgnoreBtn" class="icon-btn with-badge" type="button" title="Ignore patterns" aria-label="Ignore patterns" aria-expanded="false" aria-controls="ignorePanel"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="btn-text">Ignore patterns</span></span><span id="ignoreBadge" class="icon-badge" aria-hidden="true">0</span></button>
       <button id="swapBtn" class="icon-btn" type="button" title="Swap sides" aria-label="Swap sides"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></svg></span><span class="btn-text">Swap sides</span></span></button>
       <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="btn-text">Clear</span></span></button>
@@ -177,9 +183,11 @@
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
-    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, saveTimer: null };
+    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, saveTimer: null };
     const els = {
       compareMode: document.getElementById('compareMode'),
+      toggleWhitespaceBtn: document.getElementById('toggleWhitespaceBtn'),
+      toggleInvisibleBtn: document.getElementById('toggleInvisibleBtn'),
       ignorePanel: document.getElementById('ignorePanel'),
       toggleIgnoreBtn: document.getElementById('toggleIgnoreBtn'),
       toggleIgnoreActiveBtn: document.getElementById('toggleIgnoreActiveBtn'),
@@ -206,7 +214,24 @@
       viewUnifiedBtn: document.getElementById('viewUnifiedBtn')
     };
     function escapeHtml(s) { return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function renderVisibleText(text) {
+      const source = text ?? '';
+      if (!state.showInvisibleChars) return escapeHtml(source);
+      let out = '';
+      for (const ch of source) {
+        if (ch === ' ') out += '<span class="ws-glyph space">·</span>';
+        else if (ch === '\t') out += '<span class="ws-glyph tab">⇥</span>\t';
+        else out += escapeHtml(ch);
+      }
+      return out;
+    }
     function normalizeLines(text) { return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n'); }
+    function normalizeWhitespaceForCompare(text) { return (text ?? '').replace(/\s+/gu, ''); }
+    function buildCompareText(text, patternInfo) {
+      let out = applyIgnorePatterns(text ?? '', patternInfo);
+      if (state.ignoreWhitespace) out = normalizeWhitespaceForCompare(out);
+      return out;
+    }
     function buildIgnorePatternInfo() {
       if (!state.ignorePatternsEnabled) return { compiled: [], warnings: [], storedCount: normalizeLines(els.ignorePatterns.value || '').map(line => line.trim()).filter(Boolean).length, enabled: false };
       const lines = normalizeLines(els.ignorePatterns.value || '');
@@ -285,6 +310,14 @@
           units.push({ kind: 'ignored', raw: segment.raw, compare: segment.compare });
           continue;
         }
+        if (state.ignoreWhitespace) {
+          const parts = segment.raw.match(/\s+|[^\s]+/gu) || [];
+          for (const part of parts) {
+            if (/^\s+$/u.test(part)) units.push({ kind: 'ignored', raw: part, compare: '[whitespace]' });
+            else for (const ch of Array.from(part)) units.push({ kind: 'text', raw: ch, compare: ch });
+          }
+          continue;
+        }
         for (const ch of Array.from(segment.raw)) units.push({ kind: 'text', raw: ch, compare: ch });
       }
       return units;
@@ -336,6 +369,12 @@
       els.toggleIgnoreActiveBtn.textContent = state.ignorePatternsEnabled ? 'Patterns on' : 'Patterns off';
       els.toggleIgnoreActiveBtn.classList.toggle('active', state.ignorePatternsEnabled);
     }
+    function updateWhitespaceButton() {
+      els.toggleWhitespaceBtn.classList.toggle('active', state.ignoreWhitespace);
+    }
+    function updateInvisibleButton() {
+      els.toggleInvisibleBtn.classList.toggle('active', state.showInvisibleChars);
+    }
     function scheduleSave() {
       clearTimeout(state.saveTimer);
       state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
@@ -352,6 +391,8 @@
           ignorePatterns: els.ignorePatterns.value,
           ignorePanelOpen: state.ignorePanelOpen,
           ignorePatternsEnabled: state.ignorePatternsEnabled,
+          ignoreWhitespace: state.ignoreWhitespace,
+          showInvisibleChars: state.showInvisibleChars,
           compareMode: state.compareMode,
           viewMode: state.viewMode
         }));
@@ -371,6 +412,8 @@
         if (typeof saved.ignorePatterns === 'string') { state.ignorePatternsRaw = saved.ignorePatterns; els.ignorePatterns.value = saved.ignorePatterns; }
         if (typeof saved.ignorePanelOpen === 'boolean') state.ignorePanelOpen = saved.ignorePanelOpen;
         if (typeof saved.ignorePatternsEnabled === 'boolean') state.ignorePatternsEnabled = saved.ignorePatternsEnabled;
+        if (typeof saved.ignoreWhitespace === 'boolean') state.ignoreWhitespace = saved.ignoreWhitespace;
+        if (typeof saved.showInvisibleChars === 'boolean') state.showInvisibleChars = saved.showInvisibleChars;
         if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'log' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
           state.compareMode = saved.compareMode;
           els.compareMode.value = saved.compareMode;
@@ -424,15 +467,15 @@
       let left = '', right = '';
       for (const op of ops) {
         if (op.type === 'equal') {
-          const leftText = escapeHtml(op.a.raw);
-          const rightText = escapeHtml(op.b.raw);
+          const leftText = renderVisibleText(op.a.raw);
+          const rightText = renderVisibleText(op.b.raw);
           left += leftText;
           right += rightText;
         } else if (op.type === 'delete') {
-          const leftText = escapeHtml(op.a.raw);
+          const leftText = renderVisibleText(op.a.raw);
           left += op.a.kind === 'ignored' ? leftText : `<span class="seg-del">${leftText}</span>`;
         } else {
-          const rightText = escapeHtml(op.b.raw);
+          const rightText = renderVisibleText(op.b.raw);
           right += op.b.kind === 'ignored' ? rightText : `<span class="seg-add">${rightText}</span>`;
         }
       }
@@ -554,7 +597,7 @@
       const normalizedMessage = normalizeLogMessage(line);
       return {
         raw: line,
-        compare: applyIgnorePatterns(normalizedMessage || line, patternInfo),
+        compare: buildCompareText(normalizedMessage || line, patternInfo),
         message: normalizedMessage || line
       };
     }
@@ -571,7 +614,7 @@
         return entries;
       }
       const valueText = stringifyStable(value);
-      const compareValueText = applyIgnorePatterns(valueText, patternInfo);
+      const compareValueText = buildCompareText(valueText, patternInfo);
       entries.push({ id: path, prefixText: `${path}: `, valueText, compareValueText, fullText: `${path}: ${valueText}` });
       return entries;
     }
@@ -602,7 +645,7 @@
           const leftCompareText = left.compareValueText ?? left.valueText ?? '';
           const rightCompareText = right.compareValueText ?? right.valueText ?? '';
           if (left.prefixText === right.prefixText && leftCompareText === rightCompareText) {
-            rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(left.fullText), rightHtml: escapeHtml(right.fullText), leftText: left.fullText, rightText: right.fullText });
+            rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(left.fullText), rightHtml: renderVisibleText(right.fullText), leftText: left.fullText, rightText: right.fullText });
             same++;
           } else {
             const intra = diffChars(left.valueText || '', right.valueText || '', patternInfo);
@@ -610,10 +653,10 @@
             changed++;
           }
         } else if (left) {
-          rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(left.fullText), rightHtml: '', leftText: left.fullText, rightText: '' });
+          rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(left.fullText), rightHtml: '', leftText: left.fullText, rightText: '' });
           removed++;
         } else if (right) {
-          rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(right.fullText), leftText: '', rightText: right.fullText });
+          rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: renderVisibleText(right.fullText), leftText: '', rightText: right.fullText });
           added++;
         }
       }
@@ -622,22 +665,22 @@
       unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: `mode: ${state.compareMode}` });
       for (const row of rows) {
-        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: escapeHtml(row.leftText), text: row.leftText });
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
         else if (row.kind === 'changed') {
           unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
           unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
         }
-        else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: escapeHtml(row.leftText), text: row.leftText });
-        else unified.push({ sign: '+', kind: 'added', html: escapeHtml(row.rightText), text: row.rightText });
+        else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: renderVisibleText(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: renderVisibleText(row.rightText), text: row.rightText });
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
     function buildTextDiff(leftText, rightText, patternInfo) {
-      const leftLines = normalizeLines(leftText).map(line => ({ raw: line, compare: applyIgnorePatterns(line, patternInfo) })), rightLines = normalizeLines(rightText).map(line => ({ raw: line, compare: applyIgnorePatterns(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
+      const leftLines = normalizeLines(leftText).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), rightLines = normalizeLines(rightText).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
-          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(raw[i].a.raw), rightHtml: escapeHtml(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(raw[i].a.raw), rightHtml: renderVisibleText(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
           same++; i++; continue;
         }
         const dels = [], ins = [];
@@ -650,10 +693,10 @@
             rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl.raw, rightText: il.raw });
             changed++;
           } else if (dl != null) {
-            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(dl.raw), rightHtml: '', leftText: dl.raw, rightText: '' });
+            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(dl.raw), rightHtml: '', leftText: dl.raw, rightText: '' });
             removed++;
           } else if (il != null) {
-            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(il.raw), leftText: '', rightText: il.raw });
+            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: renderVisibleText(il.raw), leftText: '', rightText: il.raw });
             added++;
           }
         }
@@ -663,13 +706,13 @@
       unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: 'mode: text' });
       for (const row of rows) {
-        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: escapeHtml(row.leftText), text: row.leftText });
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
         else if (row.kind === 'changed') {
           unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
           unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
         }
-        else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: escapeHtml(row.leftText), text: row.leftText });
-        else unified.push({ sign: '+', kind: 'added', html: escapeHtml(row.rightText), text: row.rightText });
+        else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: renderVisibleText(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: renderVisibleText(row.rightText), text: row.rightText });
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
@@ -682,7 +725,7 @@
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
-          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(raw[i].a.raw), rightHtml: escapeHtml(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(raw[i].a.raw), rightHtml: renderVisibleText(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
           same++;
           i++;
           continue;
@@ -701,10 +744,10 @@
             rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: leftLine.raw, rightText: rightLine.raw });
             changed++;
           } else if (leftLine != null) {
-            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(leftLine.raw), rightHtml: '', leftText: leftLine.raw, rightText: '' });
+            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(leftLine.raw), rightHtml: '', leftText: leftLine.raw, rightText: '' });
             removed++;
           } else if (rightLine != null) {
-            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(rightLine.raw), leftText: '', rightText: rightLine.raw });
+            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: renderVisibleText(rightLine.raw), leftText: '', rightText: rightLine.raw });
             added++;
           }
         }
@@ -714,19 +757,19 @@
       unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: 'mode: log' });
       for (const row of rows) {
-        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: escapeHtml(row.leftText), text: row.leftText });
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
         else if (row.kind === 'changed') {
           unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
           unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
-        } else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: escapeHtml(row.leftText), text: row.leftText });
-        else unified.push({ sign: '+', kind: 'added', html: escapeHtml(row.rightText), text: row.rightText });
+        } else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: renderVisibleText(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: renderVisibleText(row.rightText), text: row.rightText });
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
     function buildEnvDiff(leftText, rightText, patternInfo) {
       const normalizeEntries = entries => entries.map(item => {
         const valueText = item.valueText || '';
-        const compareValueText = applyIgnorePatterns(valueText, patternInfo);
+        const compareValueText = buildCompareText(valueText, patternInfo);
         return { ...item, valueText, compareValueText, fullText: `${item.prefixText || ''}${valueText}` };
       });
       return buildRowsFromEntries(normalizeEntries(parseEnvEntries(leftText)), normalizeEntries(parseEnvEntries(rightText)), patternInfo);
@@ -898,7 +941,7 @@
     }
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
-      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true;
+      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false;
       els.compareMode.value = 'text'; els.leftName.textContent = '-'; els.rightName.textContent = '-'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
       els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div>';
       els.stats.innerHTML = `<span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span>`;
@@ -907,11 +950,23 @@
       els.downloadBtn.disabled = true;
       updateIgnorePanelVisibility();
       updateIgnoreEnabledButton();
+      updateWhitespaceButton();
+      updateInvisibleButton();
       updateViewButtons();
       scheduleSave();
     }
     els.computeBtn.addEventListener('click', computeDiff);
     els.downloadBtn.addEventListener('click', downloadUnifiedHtml);
+    els.toggleWhitespaceBtn.addEventListener('click', () => {
+      state.ignoreWhitespace = !state.ignoreWhitespace;
+      updateWhitespaceButton();
+      computeDiff();
+    });
+    els.toggleInvisibleBtn.addEventListener('click', () => {
+      state.showInvisibleChars = !state.showInvisibleChars;
+      updateInvisibleButton();
+      computeDiff();
+    });
     els.toggleIgnoreBtn.addEventListener('click', () => {
       state.ignorePanelOpen = !state.ignorePanelOpen;
       updateIgnorePanelVisibility();
@@ -941,6 +996,8 @@
     restoreState();
     updateIgnorePanelVisibility();
     updateIgnoreEnabledButton();
+    updateWhitespaceButton();
+    updateInvisibleButton();
     updateViewButtons();
     if (els.leftText.value || els.rightText.value) computeDiff();
     window.addEventListener('scroll', updateOverviewViewport, { passive: true });
