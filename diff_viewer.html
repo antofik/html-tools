@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -26,469 +26,130 @@
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
       --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     }
-
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      color: var(--text);
-      font-family: var(--sans);
-      background: #ffffff;
-    }
-
-    .container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 30px;
-      line-height: 1.1;
-      color: #1f2937;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      margin-bottom: 20px;
-    }
-
-    .toolbar, .inputs {
-      display: grid;
-      gap: 16px;
-    }
-
-    .toolbar {
-      grid-template-columns: repeat(5, minmax(150px, 1fr));
-      margin-bottom: 16px;
-      align-items: stretch;
-    }
-
-    .inputs {
-      grid-template-columns: 1fr 1fr;
-      margin-bottom: 18px;
-    }
-
-    .panel {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .panel-header {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      background: #fafafa;
-    }
-
-    .panel-title {
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: .02em;
-      color: #374151;
-    }
-
-    .panel-body {
-      padding: 14px;
-    }
-
-    .dropzone {
-      position: relative;
-      border: 2px dashed #d6d3d1;
-      border-radius: 14px;
-      padding: 18px;
-      min-height: 126px;
-      background: #fafafa;
-      transition: .15s ease;
-    }
-
-    .dropzone.drag {
-      border-color: #93c5fd;
-      background: #f8fafc;
-    }
-
-    .dropzone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .dropzone p {
-      margin: 0 0 10px;
-      color: var(--muted);
-    }
-
-    .filename {
-      font-family: var(--mono);
-      font-size: 13px;
-      color: #475569;
-      word-break: break-all;
-    }
-
-    .preview {
-      width: 100%;
-      min-height: 180px;
-      max-height: 280px;
-      resize: vertical;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #ffffff;
-      color: var(--text);
-      padding: 12px;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.45;
-      margin-top: 12px;
-    }
-
-    button, .button-like, .segmented button {
-      appearance: none;
-      border: 1px solid var(--border);
-      background: var(--button);
-      color: #374151;
-      border-radius: 12px;
-      padding: 11px 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: .15s ease;
-      min-height: 44px;
-    }
-
-    button:hover, .button-like:hover, .segmented button:hover {
-      background: var(--button-hover);
-    }
-
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
-
-    .small {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .stats {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .badge {
-      border: 1px solid var(--border);
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #fff;
-    }
-
-    .segmented {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      background: #fff;
-      padding: 6px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-    }
-
-    .segmented button.active {
-      background: var(--button-active);
-      border-color: #cbd5e1;
-      color: #0f172a;
-    }
-
-    .btn-content {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-
-    .btn-icon {
-      width: 16px;
-      height: 16px;
-      display: inline-block;
-      flex: 0 0 16px;
-      color: currentColor;
-    }
-
-    .btn-icon svg {
-      width: 16px;
-      height: 16px;
-      display: block;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.9;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .view-block {
-      display: none;
-    }
-
-    .view-block.active {
-      display: block;
-    }
-
-    .side-by-side {
-      border-top: 1px solid var(--border);
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .side-head {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    }
-
-    .col-head {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      background: #ffffff;
-      border-bottom: 1px solid var(--border);
-      padding: 10px 12px;
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing: .02em;
-    }
-
-    .col-head + .col-head {
-      border-left: 1px solid var(--border);
-    }
-
-    .diff-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      border-bottom: 1px solid #f1f5f9;
-      align-items: stretch;
-    }
-
-    .half {
-      min-width: 0;
-      display: grid;
-      grid-template-columns: 64px minmax(0, 1fr);
-      align-items: stretch;
-    }
-
-    .half + .half {
-      border-left: 1px solid var(--border);
-    }
-
-    .ln {
-      user-select: none;
-      color: #94a3b8;
-      border-right: 1px solid #f1f5f9;
-      padding: 6px 10px;
-      text-align: right;
-      white-space: nowrap;
-      background: #fff;
-    }
-
-    .code {
-      padding: 6px 10px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      min-height: 31px;
-      height: 100%;
-    }
-
+    body { margin: 0; color: var(--text); font-family: var(--sans); background: #ffffff; }
+    .container { width: 100%; max-width: none; margin: 0; padding: 24px; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 30px; line-height: 1.1; color: #1f2937; }
+    .toolbar, .inputs { display: grid; gap: 16px; }
+    .toolbar { display: flex; align-items: flex-end; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 0; }
+    .control-group { display: grid; gap: 6px; align-content: start; }
+    .control-label { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; padding-left: 2px; }
+    .inputs { grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
+    .panel { background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fafafa; }
+    .panel-title { font-weight: 700; font-size: 14px; letter-spacing: .02em; color: #374151; }
+    .panel-body { padding: 14px; }
+    .dropzone { position: relative; border: 2px dashed #d6d3d1; border-radius: 14px; padding: 18px; min-height: 126px; background: #fafafa; transition: .15s ease; }
+    .dropzone.drag { border-color: #93c5fd; background: #f8fafc; }
+    .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .dropzone p { margin: 0 0 10px; color: var(--muted); }
+    .filename { font-family: var(--mono); font-size: 13px; color: #475569; word-break: break-all; }
+    .preview { width: 100%; min-height: 180px; max-height: 280px; resize: vertical; border: 1px solid var(--border); border-radius: 12px; background: #ffffff; color: var(--text); padding: 12px; font-family: var(--mono); font-size: 13px; line-height: 1.45; margin-top: 12px; }
+    button, select, .segmented button { appearance: none; border: 1px solid var(--border); background: var(--button); color: #374151; border-radius: 12px; padding: 11px 14px; font-weight: 700; cursor: pointer; transition: .15s ease; min-height: 44px; }
+    button:hover, select:hover, .segmented button:hover { background: var(--button-hover); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .icon-btn { width: 44px; min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+    .icon-btn .btn-content,
+    .segmented .icon-btn .btn-content { gap: 0; }
+    .btn-text { display: none; }
+    .icon-btn.primary-run { background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%); border-color: #a7f3d0; color: #047857; }
+    .small { font-size: 12px; color: var(--muted); }
+    .stats { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+    .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; }
+    .segmented { display: inline-flex; gap: 0; align-items: center; background: #fff; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .segmented .icon-btn { border: none; border-radius: 0; }
+    .segmented .icon-btn + .icon-btn { border-left: 1px solid var(--border); }
+    .segmented button.active { background: var(--button-active); border-color: #cbd5e1; color: #0f172a; }
+    .btn-content { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+    .btn-icon { width: 16px; height: 16px; display: inline-block; flex: 0 0 16px; color: currentColor; }
+    .btn-icon svg { width: 16px; height: 16px; display: block; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .view-block { display: none; }
+    .view-block.active { display: block; }
+    .side-by-side { border-top: 1px solid var(--border); font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+    .side-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .col-head { position: sticky; top: 0; z-index: 1; background: #ffffff; border-bottom: 1px solid var(--border); padding: 10px 12px; font-size: 12px; color: var(--muted); letter-spacing: .02em; }
+    .col-head + .col-head { border-left: 1px solid var(--border); }
+    .diff-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid #f1f5f9; align-items: stretch; }
+    .half { min-width: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: stretch; }
+    .half + .half { border-left: 1px solid var(--border); }
+    .ln { user-select: none; color: #94a3b8; border-right: 1px solid #f1f5f9; padding: 6px 10px; text-align: right; white-space: nowrap; background: #fff; }
+    .code { padding: 6px 10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; min-height: 31px; height: 100%; }
     .same .code { background: var(--same-bg); }
     .add .code { background: var(--add-bg); }
     .del .code { background: var(--del-bg); }
     .placeholder .code { color: #cbd5e1; background: #fff; }
     .seg-add { background: var(--add-strong); border-radius: 3px; }
     .seg-del { background: var(--del-strong); border-radius: 3px; }
-
-    .unified-box {
-      border-top: 1px solid var(--border);
-      background: #ffffff;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .u-line {
-      display: grid;
-      grid-template-columns: 42px 1fr;
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    .u-sign {
-      text-align: center;
-      padding: 6px 4px;
-      color: #64748b;
-      border-right: 1px solid #f1f5f9;
-      background: #fff;
-      user-select: none;
-    }
-
-    .u-code {
-      padding: 6px 10px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
-
+    .unified-box { border-top: 1px solid var(--border); background: #ffffff; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+    .u-line { display: grid; grid-template-columns: 42px 1fr; border-bottom: 1px solid #f1f5f9; }
+    .u-sign { text-align: center; padding: 6px 4px; color: #64748b; border-right: 1px solid #f1f5f9; background: #fff; user-select: none; }
+    .u-code { padding: 6px 10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
     .u-add .u-code { background: var(--add-bg); }
     .u-del .u-code { background: var(--del-bg); }
     .u-meta .u-code { color: #2563eb; background: var(--meta-bg); }
-
-    .empty {
-      padding: 32px 18px;
-      color: var(--muted);
-    }
-
+    .empty { padding: 32px 18px; color: var(--muted); }
+    .error-box { padding: 18px; border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #991b1b; line-height: 1.45; }
     @media (max-width: 980px) {
-      .toolbar, .inputs {
-        grid-template-columns: 1fr;
-      }
-      .side-head,
-      .diff-row {
-        grid-template-columns: 1fr;
-      }
-      .col-head + .col-head,
-      .half + .half {
-        border-left: none;
-        border-top: 1px solid var(--border);
-      }
+      .app-header { flex-direction: column; align-items: flex-start; }
+      .toolbar, .inputs { grid-template-columns: 1fr; }
+      .toolbar { width: 100%; justify-content: flex-start; }
+      .side-head, .diff-row { grid-template-columns: 1fr; }
+      .col-head + .col-head, .half + .half { border-left: none; border-top: 1px solid var(--border); }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Diff viewer</h1>
-    <div class="subtitle">Загрузите два файла. Ниже можно переключаться между side-by-side и unified diff. Экспорт сохраняет unified diff в отдельный single-page HTML.</div>
-
-    <div class="toolbar">
-      <button id="computeBtn" type="button">
-        <span class="btn-content">
-          <span class="btn-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7a3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1 0 2.8l-.6.6a2 2 0 0 1-2.8 0l-.1-.1a1 1 0 0 0-1.1-.2a1 1 0 0 0-.6.9V21a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-.1a1 1 0 0 0-.6-.9a1 1 0 0 0-1.1.2l-.1.1a2 2 0 0 1-2.8 0l-.6-.6a2 2 0 0 1 0-2.8l.1-.1a1 1 0 0 0 .2-1.1a1 1 0 0 0-.9-.6H3a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h.1a1 1 0 0 0 .9-.6a1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 0 1 0-2.8l.6-.6a2 2 0 0 1 2.8 0l.1.1a1 1 0 0 0 1.1.2a1 1 0 0 0 .6-.9V3a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v.1a1 1 0 0 0 .6.9a1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8l-.1.1a1 1 0 0 0-.2 1.1a1 1 0 0 0 .9.6H21a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-.1a1 1 0 0 0-.9.6Z"/></svg>
-          </span>
-          <span>Сгенерировать diff</span>
-        </span>
-      </button>
-
-      <button id="downloadBtn" type="button" disabled>
-        <span class="btn-content">
-          <span class="btn-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>
-          </span>
-          <span>Скачать unified diff HTML</span>
-        </span>
-      </button>
-
-      <button id="swapBtn" type="button">
-        <span class="btn-content">
-          <span class="btn-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M8 21H3v-5"/><path d="M15 15 3 3"/></svg>
-          </span>
-          <span>Поменять файлы местами</span>
-        </span>
-      </button>
-
-      <button id="clearBtn" type="button">
-        <span class="btn-content">
-          <span class="btn-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-          </span>
-          <span>Очистить</span>
-        </span>
-      </button>
-
-      <div class="segmented" aria-label="Переключение вида diff">
-        <button id="viewSideBtn" class="active" type="button">
-          <span class="btn-content">
-            <span class="btn-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/></svg>
-            </span>
-            <span>Side-by-side</span>
-          </span>
-        </button>
-        <button id="viewUnifiedBtn" type="button">
-          <span class="btn-content">
-            <span class="btn-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/><path d="M9 9h2"/></svg>
-            </span>
-            <span>Unified</span>
-          </span>
-        </button>
+    <div class="app-header">
+      <h1>Diff viewer</h1>
+      <div class="toolbar">
+      <div class="control-group">
+        <div class="control-label">Compare Mode</div>
+        <select id="compareMode" aria-label="Comparison mode">
+          <option value="text">Plain text</option>
+          <option value="env">Env</option>
+          <option value="json">JSON</option>
+          <option value="yaml">YAML</option>
+        </select>
+      </div>
+      <button id="computeBtn" class="icon-btn primary-run" type="button" title="Generate diff" aria-label="Generate diff"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 8v8l6-4z"/></svg></span><span class="btn-text">Generate diff</span></span></button>
+      <button id="downloadBtn" class="icon-btn" type="button" title="Download unified diff HTML" aria-label="Download unified diff HTML" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="btn-text">Download unified diff HTML</span></span></button>
+      <button id="swapBtn" class="icon-btn" type="button" title="Swap sides" aria-label="Swap sides"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></svg></span><span class="btn-text">Swap sides</span></span></button>
+      <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="btn-text">Clear</span></span></button>
+      <div class="segmented" aria-label="Diff view mode">
+        <button id="viewSideBtn" class="icon-btn active" type="button" title="Side-by-side view" aria-label="Side-by-side view"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/></svg></span><span class="btn-text">Side-by-side</span></span></button>
+        <button id="viewUnifiedBtn" class="icon-btn" type="button" title="Unified view" aria-label="Unified view"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/><path d="M9 9h2"/></svg></span><span class="btn-text">Unified</span></span></button>
       </div>
     </div>
-
+    </div>
     <div class="inputs">
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Левый файл</div>
-          <div class="small" id="leftMeta">не загружен</div>
-        </div>
+        <div class="panel-header"><div class="panel-title">Left file</div><div class="small" id="leftMeta">not loaded</div></div>
         <div class="panel-body">
-          <div class="dropzone" id="leftDrop">
-            <input id="leftFile" type="file" />
-            <p>Перетащите файл сюда или нажмите для выбора</p>
-            <div class="filename" id="leftName">—</div>
-          </div>
-          <textarea id="leftText" class="preview" spellcheck="false" placeholder="Содержимое левого файла появится здесь"></textarea>
+          <div class="dropzone" id="leftDrop"><input id="leftFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="leftName">—</div></div>
+          <textarea id="leftText" class="preview" spellcheck="false" placeholder="Left file content"></textarea>
         </div>
       </div>
-
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Правый файл</div>
-          <div class="small" id="rightMeta">не загружен</div>
-        </div>
+        <div class="panel-header"><div class="panel-title">Right file</div><div class="small" id="rightMeta">not loaded</div></div>
         <div class="panel-body">
-          <div class="dropzone" id="rightDrop">
-            <input id="rightFile" type="file" />
-            <p>Перетащите файл сюда или нажмите для выбора</p>
-            <div class="filename" id="rightName">—</div>
-          </div>
-          <textarea id="rightText" class="preview" spellcheck="false" placeholder="Содержимое правого файла появится здесь"></textarea>
+          <div class="dropzone" id="rightDrop"><input id="rightFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="rightName">—</div></div>
+          <textarea id="rightText" class="preview" spellcheck="false" placeholder="Right file content"></textarea>
         </div>
       </div>
     </div>
-
     <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">Результат</div>
-        <div class="stats" id="stats">
-          <span class="badge">без изменений: 0</span>
-          <span class="badge">добавлено: 0</span>
-          <span class="badge">удалено: 0</span>
-          <span class="badge">изменено: 0</span>
-        </div>
-      </div>
-      <div id="resultBody" class="panel-body">
-        <div class="empty">Пока пусто. Загрузите два файла и нажмите «Сгенерировать diff».</div>
-      </div>
+      <div class="panel-header"><div class="panel-title">Result</div><div class="stats" id="stats"><span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span></div></div>
+      <div id="resultBody" class="panel-body"><div class="empty">Nothing to show yet. Load two files and click “Generate diff”.</div></div>
     </div>
   </div>
-
   <script>
-    const state = {
-      leftName: '',
-      rightName: '',
-      diffData: null,
-      viewMode: 'side'
-    };
-
+    const STORAGE_KEY = 'diff_viewer_state_v1';
+    const SAVE_DEBOUNCE_MS = 180;
+    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', saveTimer: null };
     const els = {
+      compareMode: document.getElementById('compareMode'),
       leftFile: document.getElementById('leftFile'),
       rightFile: document.getElementById('rightFile'),
       leftText: document.getElementById('leftText'),
@@ -508,387 +169,381 @@
       viewSideBtn: document.getElementById('viewSideBtn'),
       viewUnifiedBtn: document.getElementById('viewUnifiedBtn')
     };
-
-    function escapeHtml(s) {
-      return (s ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    function escapeHtml(s) { return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function normalizeLines(text) { return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n'); }
+    function scheduleSave() {
+      clearTimeout(state.saveTimer);
+      state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
     }
-
-    function normalizeLines(text) {
-      return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    function saveStateNow() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          leftText: els.leftText.value,
+          rightText: els.rightText.value,
+          leftName: state.leftName,
+          rightName: state.rightName,
+          leftMeta: els.leftMeta.textContent,
+          rightMeta: els.rightMeta.textContent,
+          compareMode: state.compareMode,
+          viewMode: state.viewMode
+        }));
+      } catch {}
     }
-
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.leftText === 'string') els.leftText.value = saved.leftText;
+        if (typeof saved.rightText === 'string') els.rightText.value = saved.rightText;
+        if (typeof saved.leftName === 'string') { state.leftName = saved.leftName; els.leftName.textContent = saved.leftName || '—'; }
+        if (typeof saved.rightName === 'string') { state.rightName = saved.rightName; els.rightName.textContent = saved.rightName || '—'; }
+        if (typeof saved.leftMeta === 'string') els.leftMeta.textContent = saved.leftMeta || 'not loaded';
+        if (typeof saved.rightMeta === 'string') els.rightMeta.textContent = saved.rightMeta || 'not loaded';
+        if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
+          state.compareMode = saved.compareMode;
+          els.compareMode.value = saved.compareMode;
+        }
+        if (saved.viewMode === 'side' || saved.viewMode === 'unified') {
+          state.viewMode = saved.viewMode;
+        }
+      } catch {}
+    }
     function readFileInto(file, side) {
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
         const text = typeof reader.result === 'string' ? reader.result : '';
         if (side === 'left') {
-          els.leftText.value = text;
-          state.leftName = file.name;
-          els.leftName.textContent = file.name;
-          els.leftMeta.textContent = `${file.size.toLocaleString('ru-RU')} bytes`;
+          els.leftText.value = text; state.leftName = file.name; els.leftName.textContent = file.name; els.leftMeta.textContent = `${file.size.toLocaleString('en-US')} bytes`;
         } else {
-          els.rightText.value = text;
-          state.rightName = file.name;
-          els.rightName.textContent = file.name;
-          els.rightMeta.textContent = `${file.size.toLocaleString('ru-RU')} bytes`;
+          els.rightText.value = text; state.rightName = file.name; els.rightName.textContent = file.name; els.rightMeta.textContent = `${file.size.toLocaleString('en-US')} bytes`;
         }
+        scheduleSave();
+        computeDiff();
       };
       reader.readAsText(file);
     }
-
     function attachDropZone(dropEl, inputEl, side) {
-      ['dragenter', 'dragover'].forEach(evt => dropEl.addEventListener(evt, e => {
-        e.preventDefault();
-        dropEl.classList.add('drag');
-      }));
-      ['dragleave', 'drop'].forEach(evt => dropEl.addEventListener(evt, e => {
-        e.preventDefault();
-        dropEl.classList.remove('drag');
-      }));
-      dropEl.addEventListener('drop', e => {
-        const file = e.dataTransfer?.files?.[0];
-        if (file) readFileInto(file, side);
-      });
-      inputEl.addEventListener('change', e => {
-        const file = e.target.files?.[0];
-        if (file) readFileInto(file, side);
-      });
+      ['dragenter', 'dragover'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.add('drag'); }));
+      ['dragleave', 'drop'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.remove('drag'); }));
+      dropEl.addEventListener('drop', e => { const file = e.dataTransfer?.files?.[0]; if (file) readFileInto(file, side); });
+      inputEl.addEventListener('change', e => { const file = e.target.files?.[0]; if (file) readFileInto(file, side); });
     }
-
     function lcsMatrix(a, b, eq = (x, y) => x === y) {
-      const m = a.length, n = b.length;
-      const dp = Array.from({ length: m + 1 }, () => new Uint32Array(n + 1));
-      for (let i = m - 1; i >= 0; i--) {
-        for (let j = n - 1; j >= 0; j--) {
-          dp[i][j] = eq(a[i], b[j]) ? (dp[i + 1][j + 1] + 1) : Math.max(dp[i + 1][j], dp[i][j + 1]);
-        }
-      }
+      const m = a.length, n = b.length, dp = Array.from({ length: m + 1 }, () => new Uint32Array(n + 1));
+      for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--) dp[i][j] = eq(a[i], b[j]) ? (dp[i + 1][j + 1] + 1) : Math.max(dp[i + 1][j], dp[i][j + 1]);
       return dp;
     }
-
     function diffArray(a, b, eq = (x, y) => x === y) {
-      const dp = lcsMatrix(a, b, eq);
-      const ops = [];
-      let i = 0, j = 0;
+      const dp = lcsMatrix(a, b, eq), ops = []; let i = 0, j = 0;
       while (i < a.length && j < b.length) {
-        if (eq(a[i], b[j])) {
-          ops.push({ type: 'equal', a: a[i], b: b[j] });
-          i++; j++;
-        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-          ops.push({ type: 'delete', a: a[i] });
-          i++;
-        } else {
-          ops.push({ type: 'insert', b: b[j] });
-          j++;
-        }
+        if (eq(a[i], b[j])) { ops.push({ type: 'equal', a: a[i], b: b[j] }); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: 'delete', a: a[i] }); i++; }
+        else { ops.push({ type: 'insert', b: b[j] }); j++; }
       }
       while (i < a.length) ops.push({ type: 'delete', a: a[i++] });
       while (j < b.length) ops.push({ type: 'insert', b: b[j++] });
       return ops;
     }
-
     function diffChars(oldStr, newStr) {
-      const a = Array.from(oldStr);
-      const b = Array.from(newStr);
-      const ops = diffArray(a, b);
-      let left = '', right = '';
+      const ops = diffArray(Array.from(oldStr), Array.from(newStr)); let left = '', right = '';
       for (const op of ops) {
-        if (op.type === 'equal') {
-          const ch = escapeHtml(op.a);
-          left += ch;
-          right += ch;
-        } else if (op.type === 'delete') {
-          left += `<span class="seg-del">${escapeHtml(op.a)}</span>`;
-        } else if (op.type === 'insert') {
-          right += `<span class="seg-add">${escapeHtml(op.b)}</span>`;
-        }
+        if (op.type === 'equal') { const ch = escapeHtml(op.a); left += ch; right += ch; }
+        else if (op.type === 'delete') left += `<span class="seg-del">${escapeHtml(op.a)}</span>`;
+        else right += `<span class="seg-add">${escapeHtml(op.b)}</span>`;
       }
       return { left, right };
     }
-
-    function buildStructuredDiff(leftLines, rightLines) {
-      const raw = diffArray(leftLines, rightLines);
-      const rows = [];
-      let i = 0;
-      let leftNo = 1, rightNo = 1;
-      let added = 0, removed = 0, changed = 0, same = 0;
-
+    function stringifyStable(value) {
+      if (Array.isArray(value)) return '[' + value.map(stringifyStable).join(',') + ']';
+      if (value && typeof value === 'object') { const keys = Object.keys(value).sort(); return '{' + keys.map(key => JSON.stringify(key) + ':' + stringifyStable(value[key])).join(',') + '}'; }
+      return JSON.stringify(value);
+    }
+    function sortDeep(value) {
+      if (Array.isArray(value)) return value.map(sortDeep);
+      if (value && typeof value === 'object') { const out = {}; for (const key of Object.keys(value).sort()) out[key] = sortDeep(value[key]); return out; }
+      return value;
+    }
+    function parseJsonText(text) { return sortDeep(JSON.parse(text)); }
+    function parseYamlScalar(text) {
+      if (text === 'null' || text === '~') return null;
+      if (text === 'true') return true;
+      if (text === 'false') return false;
+      if (/^[+-]?\d+$/.test(text)) return Number(text);
+      if (/^[+-]?\d+\.\d+$/.test(text)) return Number(text);
+      if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith('\'') && text.endsWith('\''))) return text.slice(1, -1);
+      return text;
+    }
+    function parseYamlText(text) {
+      const rawLines = normalizeLines(text), lines = [];
+      for (const raw of rawLines) {
+        if (!raw.trim() || raw.trim().startsWith('#')) continue;
+        if (/\t/.test(raw)) throw new Error('Tabs are not supported in YAML mode');
+        lines.push({ indent: raw.match(/^ */)[0].length, text: raw.trim() });
+      }
+      function splitPair(lineText) {
+        const idx = lineText.indexOf(':');
+        if (idx === -1) return null;
+        const key = lineText.slice(0, idx).trim();
+        if (!key) return null;
+        return { key, rest: lineText.slice(idx + 1).trim() };
+      }
+      function parseNode(index, indent) {
+        if (index >= lines.length) return [null, index];
+        if (lines[index].indent !== indent) throw new Error(`Unexpected indentation near "${lines[index].text}"`);
+        return lines[index].text.startsWith('- ') ? parseSequence(index, indent) : parseMapping(index, indent);
+      }
+      function parseMapping(index, indent) {
+        const out = {};
+        while (index < lines.length) {
+          const line = lines[index];
+          if (line.indent < indent) break;
+          if (line.indent > indent) throw new Error(`Unexpected indentation near "${line.text}"`);
+          if (line.text.startsWith('- ')) break;
+          const pair = splitPair(line.text);
+          if (!pair) throw new Error(`Invalid YAML mapping line: "${line.text}"`);
+          index++;
+          if (pair.rest) out[pair.key] = parseYamlScalar(pair.rest);
+          else if (index < lines.length && lines[index].indent > indent) {
+            const [child, nextIndex] = parseNode(index, lines[index].indent);
+            out[pair.key] = child;
+            index = nextIndex;
+          } else out[pair.key] = null;
+        }
+        return [out, index];
+      }
+      function parseSequence(index, indent) {
+        const out = [];
+        while (index < lines.length) {
+          const line = lines[index];
+          if (line.indent < indent) break;
+          if (line.indent > indent) throw new Error(`Unexpected indentation near "${line.text}"`);
+          if (!line.text.startsWith('- ')) break;
+          const content = line.text.slice(2).trim();
+          index++;
+          if (!content) {
+            if (index < lines.length && lines[index].indent > indent) {
+              const [child, nextIndex] = parseNode(index, lines[index].indent);
+              out.push(child);
+              index = nextIndex;
+            } else out.push(null);
+            continue;
+          }
+          const pair = splitPair(content);
+          if (!pair) { out.push(parseYamlScalar(content)); continue; }
+          const item = {};
+          if (pair.rest) {
+            item[pair.key] = parseYamlScalar(pair.rest);
+            if (index < lines.length && lines[index].indent > indent) {
+              const [tail, nextIndex] = parseMapping(index, lines[index].indent);
+              Object.assign(item, tail);
+              index = nextIndex;
+            }
+          } else if (index < lines.length && lines[index].indent > indent) {
+            const [child, nextIndex] = parseNode(index, lines[index].indent);
+            item[pair.key] = child;
+            index = nextIndex;
+          } else item[pair.key] = null;
+          out.push(item);
+        }
+        return [out, index];
+      }
+      if (!lines.length) return null;
+      const [result, index] = parseNode(0, lines[0].indent);
+      if (index !== lines.length) throw new Error('Could not parse the full YAML document');
+      return sortDeep(result);
+    }
+    function flattenStructured(value, path = '$', entries = []) {
+      if (Array.isArray(value)) {
+        if (!value.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '[]', fullText: `${path}: []` });
+        value.forEach((item, index) => flattenStructured(item, `${path}[${index}]`, entries));
+        return entries;
+      }
+      if (value && typeof value === 'object') {
+        const keys = Object.keys(value).sort();
+        if (!keys.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '{}', fullText: `${path}: {}` });
+        keys.forEach(key => flattenStructured(value[key], `${path}.${key}`, entries));
+        return entries;
+      }
+      const valueText = stringifyStable(value);
+      entries.push({ id: path, prefixText: `${path}: `, valueText, fullText: `${path}: ${valueText}` });
+      return entries;
+    }
+    function parseEnvEntries(text) {
+      const lines = normalizeLines(text), counts = Object.create(null); let rawIndex = 0;
+      return lines.map(line => {
+        const match = line.match(/^\s*(?:export\s+)?([^=\s#;]+)\s*=(.*)$/);
+        if (!match) return { id: `__raw__:${++rawIndex}`, prefixText: '', valueText: line, fullText: line };
+        const key = match[1]; counts[key] = (counts[key] || 0) + 1;
+        const prefixText = counts[key] > 1 ? `${key} [${counts[key]}]=` : `${key}=`;
+        return { id: `key:${key}#${counts[key]}`, prefixText, valueText: match[2], fullText: `${prefixText}${match[2]}` };
+      });
+    }
+    function mergeIds(leftEntries, rightEntries) {
+      const seen = new Set(), order = [];
+      for (const item of leftEntries) if (!seen.has(item.id)) { seen.add(item.id); order.push(item.id); }
+      for (const item of rightEntries) if (!seen.has(item.id)) { seen.add(item.id); order.push(item.id); }
+      return order;
+    }
+    function buildRowsFromEntries(leftEntries, rightEntries) {
+      const leftMap = new Map(leftEntries.map(item => [item.id, item]));
+      const rightMap = new Map(rightEntries.map(item => [item.id, item]));
+      const order = mergeIds(leftEntries, rightEntries), rows = [];
+      let leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
+      for (const id of order) {
+        const left = leftMap.get(id), right = rightMap.get(id);
+        if (left && right) {
+          if (left.prefixText === right.prefixText && left.valueText === right.valueText) {
+            rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(left.fullText), rightHtml: escapeHtml(right.fullText), leftText: left.fullText, rightText: right.fullText });
+            same++;
+          } else {
+            const intra = diffChars(left.valueText || '', right.valueText || '');
+            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(left.prefixText || '') + intra.left, rightHtml: escapeHtml(right.prefixText || '') + intra.right, leftText: left.fullText, rightText: right.fullText });
+            changed++;
+          }
+        } else if (left) {
+          rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(left.fullText), rightHtml: '', leftText: left.fullText, rightText: '' });
+          removed++;
+        } else if (right) {
+          rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(right.fullText), leftText: '', rightText: right.fullText });
+          added++;
+        }
+      }
+      const unified = [];
+      unified.push({ sign: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
+      unified.push({ sign: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
+      unified.push({ sign: 'meta', text: `mode: ${state.compareMode}` });
+      for (const row of rows) {
+        if (row.kind === 'same') unified.push({ sign: ' ', html: escapeHtml(row.leftText), text: row.leftText });
+        else if (row.kind === 'changed') { unified.push({ sign: '-', html: row.leftHtml, text: row.leftText }); unified.push({ sign: '+', html: row.rightHtml, text: row.rightText }); }
+        else if (row.kind === 'deleted') unified.push({ sign: '-', html: escapeHtml(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', html: escapeHtml(row.rightText), text: row.rightText });
+      }
+      return { rows, unified, stats: { same, added, removed, changed } };
+    }
+    function buildTextDiff(leftText, rightText) {
+      const leftLines = normalizeLines(leftText), rightLines = normalizeLines(rightText), raw = diffArray(leftLines, rightLines), rows = [];
+      let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
-          rows.push({
-            kind: 'same',
-            leftNo: leftNo++,
-            rightNo: rightNo++,
-            leftHtml: escapeHtml(raw[i].a),
-            rightHtml: escapeHtml(raw[i].b),
-            leftText: raw[i].a,
-            rightText: raw[i].b
-          });
-          same++;
-          i++;
-          continue;
+          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(raw[i].a), rightHtml: escapeHtml(raw[i].b), leftText: raw[i].a, rightText: raw[i].b });
+          same++; i++; continue;
         }
-
-        const dels = [];
-        const ins = [];
-        while (i < raw.length && raw[i].type !== 'equal') {
-          if (raw[i].type === 'delete') dels.push(raw[i].a);
-          if (raw[i].type === 'insert') ins.push(raw[i].b);
-          i++;
-        }
-
+        const dels = [], ins = [];
+        while (i < raw.length && raw[i].type !== 'equal') { if (raw[i].type === 'delete') dels.push(raw[i].a); if (raw[i].type === 'insert') ins.push(raw[i].b); i++; }
         const pairCount = Math.max(dels.length, ins.length);
         for (let k = 0; k < pairCount; k++) {
-          const dl = dels[k];
-          const il = ins[k];
+          const dl = dels[k], il = ins[k];
           if (dl != null && il != null) {
-            const intraline = diffChars(dl, il);
-            rows.push({
-              kind: 'changed',
-              leftNo: leftNo++,
-              rightNo: rightNo++,
-              leftHtml: intraline.left,
-              rightHtml: intraline.right,
-              leftText: dl,
-              rightText: il
-            });
+            const intra = diffChars(dl, il);
+            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl, rightText: il });
             changed++;
           } else if (dl != null) {
-            rows.push({
-              kind: 'deleted',
-              leftNo: leftNo++,
-              rightNo: '',
-              leftHtml: escapeHtml(dl),
-              rightHtml: '',
-              leftText: dl,
-              rightText: ''
-            });
+            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(dl), rightHtml: '', leftText: dl, rightText: '' });
             removed++;
           } else if (il != null) {
-            rows.push({
-              kind: 'added',
-              leftNo: '',
-              rightNo: rightNo++,
-              leftHtml: '',
-              rightHtml: escapeHtml(il),
-              leftText: '',
-              rightText: il
-            });
+            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(il), leftText: '', rightText: il });
             added++;
           }
         }
       }
-
       const unified = [];
       unified.push({ sign: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
       unified.push({ sign: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
+      unified.push({ sign: 'meta', text: 'mode: text' });
       for (const row of rows) {
-        if (row.kind === 'same') {
-          unified.push({ sign: ' ', html: escapeHtml(row.leftText), text: row.leftText });
-        } else if (row.kind === 'changed') {
-          const intra = diffChars(row.leftText, row.rightText);
-          unified.push({ sign: '-', html: intra.left, text: row.leftText });
-          unified.push({ sign: '+', html: intra.right, text: row.rightText });
-        } else if (row.kind === 'deleted') {
-          unified.push({ sign: '-', html: escapeHtml(row.leftText), text: row.leftText });
-        } else if (row.kind === 'added') {
-          unified.push({ sign: '+', html: escapeHtml(row.rightText), text: row.rightText });
-        }
+        if (row.kind === 'same') unified.push({ sign: ' ', html: escapeHtml(row.leftText), text: row.leftText });
+        else if (row.kind === 'changed') { unified.push({ sign: '-', html: row.leftHtml, text: row.leftText }); unified.push({ sign: '+', html: row.rightHtml, text: row.rightText }); }
+        else if (row.kind === 'deleted') unified.push({ sign: '-', html: escapeHtml(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', html: escapeHtml(row.rightText), text: row.rightText });
       }
-
       return { rows, unified, stats: { same, added, removed, changed } };
     }
-
+    function buildEnvDiff(leftText, rightText) { return buildRowsFromEntries(parseEnvEntries(leftText), parseEnvEntries(rightText)); }
+    function buildStructuredObjectDiff(leftObj, rightObj) { return buildRowsFromEntries(flattenStructured(leftObj), flattenStructured(rightObj)); }
     function renderDiff(data) {
-      const leftHead = escapeHtml(state.leftName || 'left.txt');
-      const rightHead = escapeHtml(state.rightName || 'right.txt');
-
-      const sideRows = [];
-      for (const row of data.rows) {
+      const leftHead = escapeHtml(state.leftName || 'left.txt'), rightHead = escapeHtml(state.rightName || 'right.txt');
+      const sideRows = data.rows.map(row => {
         const leftClass = row.kind === 'added' ? 'placeholder' : (row.kind === 'deleted' || row.kind === 'changed' ? 'del' : 'same');
         const rightClass = row.kind === 'deleted' ? 'placeholder' : (row.kind === 'added' || row.kind === 'changed' ? 'add' : 'same');
-        sideRows.push(`
-          <div class="diff-row">
-            <div class="half ${leftClass}">
-              <div class="ln">${row.leftNo || ''}</div>
-              <div class="code">${row.leftHtml || ''}</div>
-            </div>
-            <div class="half ${rightClass}">
-              <div class="ln">${row.rightNo || ''}</div>
-              <div class="code">${row.rightHtml || ''}</div>
-            </div>
-          </div>
-        `);
-      }
-
+        return `<div class="diff-row"><div class="half ${leftClass}"><div class="ln">${row.leftNo || ''}</div><div class="code">${row.leftHtml || ''}</div></div><div class="half ${rightClass}"><div class="ln">${row.rightNo || ''}</div><div class="code">${row.rightHtml || ''}</div></div></div>`;
+      }).join('');
       const unifiedRows = data.unified.map(item => {
         let cls = '';
-        if (item.sign === '+') cls = 'u-add';
-        else if (item.sign === '-') cls = 'u-del';
-        else if (item.sign === 'meta') cls = 'u-meta';
-        return `
-          <div class="u-line ${cls}">
-            <div class="u-sign">${escapeHtml(item.sign)}</div>
-            <div class="u-code">${item.html ?? escapeHtml(item.text)}</div>
-          </div>
-        `;
+        if (item.sign === '+') cls = 'u-add'; else if (item.sign === '-') cls = 'u-del'; else if (item.sign === 'meta') cls = 'u-meta';
+        return `<div class="u-line ${cls}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
       }).join('');
-
-      els.resultBody.innerHTML = `
-        <div id="sideView" class="view-block ${state.viewMode === 'side' ? 'active' : ''}">
-          <div class="side-by-side">
-            <div class="side-head">
-              <div class="col-head">${leftHead}</div>
-              <div class="col-head">${rightHead}</div>
-            </div>
-            ${sideRows.join('')}
-          </div>
-        </div>
-        <div id="unifiedView" class="view-block ${state.viewMode === 'unified' ? 'active' : ''}">
-          <div class="unified-box">
-            <div class="col-head">Unified diff</div>
-            ${unifiedRows}
-          </div>
-        </div>
-      `;
-
-      els.stats.innerHTML = `
-        <span class="badge">без изменений: ${data.stats.same}</span>
-        <span class="badge">добавлено: ${data.stats.added}</span>
-        <span class="badge">удалено: ${data.stats.removed}</span>
-        <span class="badge">изменено: ${data.stats.changed}</span>
-      `;
+      els.resultBody.innerHTML = `<div id="sideView" class="view-block ${state.viewMode === 'side' ? 'active' : ''}"><div class="side-by-side"><div class="side-head"><div class="col-head">${leftHead}</div><div class="col-head">${rightHead}</div></div>${sideRows}</div></div><div id="unifiedView" class="view-block ${state.viewMode === 'unified' ? 'active' : ''}"><div class="unified-box"><div class="col-head">Unified diff</div>${unifiedRows}</div></div>`;
+      els.stats.innerHTML = `<span class="badge">unchanged: ${data.stats.same}</span><span class="badge">added: ${data.stats.added}</span><span class="badge">removed: ${data.stats.removed}</span><span class="badge">changed: ${data.stats.changed}</span>`;
       updateViewButtons();
     }
-
+    function renderError(message) {
+      state.diffData = null;
+      els.resultBody.innerHTML = `<div class="error-box">${escapeHtml(message)}</div>`;
+      els.stats.innerHTML = `<span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span>`;
+      els.downloadBtn.disabled = true;
+      updateViewButtons();
+    }
     function buildExportHtml(data) {
       const unifiedRows = data.unified.map(item => {
         let cls = '';
-        if (item.sign === '+') cls = 'u-add';
-        else if (item.sign === '-') cls = 'u-del';
-        else if (item.sign === 'meta') cls = 'u-meta';
-        return `
-          <div class="u-line ${cls}">
-            <div class="u-sign">${escapeHtml(item.sign)}</div>
-            <div class="u-code">${item.html ?? escapeHtml(item.text)}</div>
-          </div>
-        `;
+        if (item.sign === '+') cls = 'u-add'; else if (item.sign === '-') cls = 'u-del'; else if (item.sign === 'meta') cls = 'u-meta';
+        return `<div class="u-line ${cls}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
       }).join('');
-
-      return `<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Unified diff</title>
-<style>
-  body {
-    margin: 0;
-    color: #334155;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    background: #ffffff;
-  }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-  h1 { margin: 0 0 10px; font-size: 24px; font-family: system-ui, sans-serif; color: #1f2937; }
-  .meta { color: #64748b; margin-bottom: 18px; font-family: system-ui, sans-serif; }
-  .box {
-    border: 1px solid #e7e5e4;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #ffffff;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  }
-  .u-line { display: grid; grid-template-columns: 42px 1fr; border-bottom: 1px solid #f1f5f9; font-size: 13px; line-height: 1.5; }
-  .u-sign { text-align: center; padding: 6px 4px; color: #64748b; border-right: 1px solid #f1f5f9; background: #fff; user-select: none; }
-  .u-code { padding: 6px 10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
-  .u-add .u-code { background: #ecfdf5; }
-  .u-del .u-code { background: #fef2f2; }
-  .u-meta .u-code { color: #2563eb; background: #eff6ff; }
-  .seg-add { background: #bbf7d0; border-radius: 3px; }
-  .seg-del { background: #fecaca; border-radius: 3px; }
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Unified diff</h1>
-    <div class="meta">${escapeHtml(state.leftName || 'left.txt')} → ${escapeHtml(state.rightName || 'right.txt')}</div>
-    <div class="box">${unifiedRows}</div>
-  </div>
-</body>
-</html>`;
+      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#fef2f2;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fecaca;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
     }
-
     function downloadUnifiedHtml() {
       if (!state.diffData) return;
-      const content = buildExportHtml(state.diffData);
-      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const leftBase = (state.leftName || 'left').replace(/[^\w.-]+/g, '_');
-      const rightBase = (state.rightName || 'right').replace(/[^\w.-]+/g, '_');
+      const content = buildExportHtml(state.diffData), blob = new Blob([content], { type: 'text/html;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+      const leftBase = (state.leftName || 'left').replace(/[^\w.-]+/g, '_'), rightBase = (state.rightName || 'right').replace(/[^\w.-]+/g, '_');
       a.href = url;
-      a.download = `unified_diff__${leftBase}__vs__${rightBase}.html`;
+      a.download = `unified_diff__${state.compareMode}__${leftBase}__vs__${rightBase}.html`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     }
-
     function computeDiff() {
-      const left = els.leftText.value;
-      const right = els.rightText.value;
-      const leftLines = normalizeLines(left);
-      const rightLines = normalizeLines(right);
-      const data = buildStructuredDiff(leftLines, rightLines);
-      state.diffData = data;
-      renderDiff(data);
-      els.downloadBtn.disabled = false;
+      const left = els.leftText.value, right = els.rightText.value;
+      state.compareMode = els.compareMode.value;
+      try {
+        let data;
+        if (state.compareMode === 'env') data = buildEnvDiff(left, right);
+        else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right));
+        else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right));
+        else data = buildTextDiff(left, right);
+        state.diffData = data;
+        renderDiff(data);
+        els.downloadBtn.disabled = false;
+        scheduleSave();
+      } catch (error) {
+        renderError(`${state.compareMode.toUpperCase()} compare error: ${error.message}`);
+        scheduleSave();
+      }
     }
-
     function setViewMode(mode) {
       state.viewMode = mode;
-      const sideView = document.getElementById('sideView');
-      const unifiedView = document.getElementById('unifiedView');
+      const sideView = document.getElementById('sideView'), unifiedView = document.getElementById('unifiedView');
       if (sideView) sideView.classList.toggle('active', mode === 'side');
       if (unifiedView) unifiedView.classList.toggle('active', mode === 'unified');
       updateViewButtons();
+      scheduleSave();
     }
-
     function updateViewButtons() {
       els.viewSideBtn.classList.toggle('active', state.viewMode === 'side');
       els.viewUnifiedBtn.classList.toggle('active', state.viewMode === 'unified');
     }
-
     function clearAll() {
-      els.leftFile.value = '';
-      els.rightFile.value = '';
-      els.leftText.value = '';
-      els.rightText.value = '';
-      state.leftName = '';
-      state.rightName = '';
-      state.diffData = null;
-      state.viewMode = 'side';
-      els.leftName.textContent = '—';
-      els.rightName.textContent = '—';
-      els.leftMeta.textContent = 'не загружен';
-      els.rightMeta.textContent = 'не загружен';
-      els.resultBody.innerHTML = '<div class="empty">Пока пусто. Загрузите два файла и нажмите «Сгенерировать diff».</div>';
-      els.stats.innerHTML = `
-        <span class="badge">без изменений: 0</span>
-        <span class="badge">добавлено: 0</span>
-        <span class="badge">удалено: 0</span>
-        <span class="badge">изменено: 0</span>
-      `;
+      els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
+      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text';
+      els.compareMode.value = 'text'; els.leftName.textContent = '—'; els.rightName.textContent = '—'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
+      els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Load two files and click “Generate diff”.</div>';
+      els.stats.innerHTML = `<span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span>`;
       els.downloadBtn.disabled = true;
       updateViewButtons();
+      scheduleSave();
     }
-
     els.computeBtn.addEventListener('click', computeDiff);
     els.downloadBtn.addEventListener('click', downloadUnifiedHtml);
     els.swapBtn.addEventListener('click', () => {
@@ -901,10 +556,15 @@
     els.clearBtn.addEventListener('click', clearAll);
     els.viewSideBtn.addEventListener('click', () => setViewMode('side'));
     els.viewUnifiedBtn.addEventListener('click', () => setViewMode('unified'));
-
+    els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; computeDiff(); });
+    els.leftText.addEventListener('input', scheduleSave);
+    els.rightText.addEventListener('input', scheduleSave);
     attachDropZone(els.leftDrop, els.leftFile, 'left');
     attachDropZone(els.rightDrop, els.rightFile, 'right');
+    restoreState();
     updateViewButtons();
+    if (els.leftText.value || els.rightText.value) computeDiff();
+    window.addEventListener('beforeunload', saveStateNow);
   </script>
 </body>
 </html>

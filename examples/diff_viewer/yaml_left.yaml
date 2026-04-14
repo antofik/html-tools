@@ -1,0 +1,14 @@
+app:
+  name: HtmlTools
+  version: 2.4.0
+  features:
+    diffStructured: false
+    exportHtml: true
+server:
+  port: 8080
+  timeoutMs: 5000
+users:
+  - id: 1
+    role: admin
+  - id: 2
+    role: viewer

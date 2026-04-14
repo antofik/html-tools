@@ -1,0 +1,16 @@
+server:
+  timeoutMs: 7000
+  port: 9090
+users:
+  - role: admin
+    id: 1
+  - role: editor
+    id: 2
+  - id: 3
+    role: viewer
+app:
+  features:
+    exportHtml: true
+    diffStructured: true
+  version: 2.5.0
+  name: HtmlTools

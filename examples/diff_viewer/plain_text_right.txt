@@ -1,0 +1,19 @@
+Release notes
+-------------
+Version: 2.5.0
+Date: 2026-04-15
+
+Features:
+- Added structured diff modes
+- Improved export metadata and filenames
+- Updated toolbar layout
+- Added explicit compare mode label
+
+Known issues:
+- YAML parser supports a practical subset only
+- Large files may render slower in unified mode
+- Export does not preserve collapsed state
+
+Next:
+- Add search in diff results
+- Add keyboard shortcuts

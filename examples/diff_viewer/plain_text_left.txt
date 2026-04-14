@@ -1,0 +1,16 @@
+Release notes
+-------------
+Version: 2.4.0
+Date: 2026-04-14
+
+Features:
+- Added structured diff modes
+- Improved export metadata
+- Updated toolbar layout
+
+Known issues:
+- YAML parser supports a practical subset only
+- Large files may render slower in unified mode
+
+Next:
+- Add search in diff results
