@@ -377,7 +377,7 @@
     .node-value.number { color: var(--number); }
     .node-value.boolean { color: var(--boolean); }
     .node-value.null { color: var(--null); }
-    .collapsed-inline { color: var(--muted); margin-left: 8px; }
+    .collapsed-inline { color: var(--muted); margin-left: 0; }
     .children { margin: 0; padding: 0; }
 
     @media (max-width: 1180px) {
@@ -846,8 +846,8 @@
     }
 
     function shortSummary(value) {
-      if (Array.isArray(value)) return `[#${value.length}]`;
-      if (value && typeof value === 'object') return `{#${Object.keys(value).length}}`;
+      if (Array.isArray(value)) return `#${value.length}`;
+      if (value && typeof value === 'object') return `#${Object.keys(value).length}`;
       return '';
     }
 
