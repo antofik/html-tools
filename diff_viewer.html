@@ -131,6 +131,7 @@
         <select id="compareMode" aria-label="Comparison mode">
           <option value="text">Plain text</option>
           <option value="env">Env</option>
+          <option value="log">Log</option>
           <option value="json">JSON</option>
           <option value="yaml">YAML</option>
         </select>
@@ -288,6 +289,26 @@
       }
       return units;
     }
+    function cloneIgnoreEntry(entry, token) {
+      const flags = entry.regex.flags.includes('g') ? entry.regex.flags : `${entry.regex.flags}g`;
+      return { regex: new RegExp(entry.regex.source, flags), token, source: entry.source };
+    }
+    function buildLogInlinePatternInfo(patternInfo) {
+      const compiled = [];
+      let tokenIndex = 1;
+      const builtinEntries = [
+        { regex: /^\d{4}-\d{2}-\d{2}[T ][0-9:.]+(?:Z|[+-]\d{2}:?\d{2})?/gu, source: 'log:timestamp' },
+        { regex: /^\d{2}:\d{2}:\d{2}(?:[.,]\d{3,6})?/gu, source: 'log:time' },
+        { regex: /\[[^\]]+\]/gu, source: 'log:thread' }
+      ];
+      for (const entry of builtinEntries) {
+        compiled.push(cloneIgnoreEntry(entry, `[ignored:${tokenIndex++}]`));
+      }
+      for (const entry of patternInfo.compiled) {
+        compiled.push(cloneIgnoreEntry(entry, `[ignored:${tokenIndex++}]`));
+      }
+      return { compiled, warnings: patternInfo.warnings, storedCount: patternInfo.storedCount, enabled: patternInfo.enabled };
+    }
     function updateIgnoreMeta(patternInfo) {
       if (!patternInfo.compiled.length && !patternInfo.warnings.length) {
         const hasStoredPatterns = !patternInfo.enabled && patternInfo.storedCount > 0;
@@ -350,7 +371,7 @@
         if (typeof saved.ignorePatterns === 'string') { state.ignorePatternsRaw = saved.ignorePatterns; els.ignorePatterns.value = saved.ignorePatterns; }
         if (typeof saved.ignorePanelOpen === 'boolean') state.ignorePanelOpen = saved.ignorePanelOpen;
         if (typeof saved.ignorePatternsEnabled === 'boolean') state.ignorePatternsEnabled = saved.ignorePatternsEnabled;
-        if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
+        if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'log' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
           state.compareMode = saved.compareMode;
           els.compareMode.value = saved.compareMode;
         }
@@ -516,6 +537,27 @@
       if (index !== lines.length) throw new Error('Could not parse the full YAML document');
       return sortDeep(result);
     }
+    function normalizeLogMessage(text) {
+      let out = text.trim();
+      out = out.replace(/^\d{4}-\d{2}-\d{2}[T ][0-9:.]+(?:Z|[+-]\d{2}:?\d{2})?\s+/, '');
+      out = out.replace(/^\d{2}:\d{2}:\d{2}(?:[.,]\d{3,6})?\s+/, '');
+      out = out.replace(/^(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\s+/i, '');
+      out = out.replace(/^\d+\s+---\s+\[[^\]]+\]\s+/, '');
+      out = out.replace(/^\[[^\]]+\]\s+/, '');
+      out = out.replace(/^[A-Za-z0-9_.$-]+\s+:\s+/, '');
+      out = out.replace(/^[A-Za-z0-9_.$-]+\s+-\s+/, '');
+      const springSplit = out.match(/^(?:[A-Za-z0-9_.$-]+\s+){1,3}(?::|-)\s+(.*)$/);
+      if (springSplit && springSplit[1]) out = springSplit[1];
+      return out.trim();
+    }
+    function buildLogLineInfo(line, patternInfo) {
+      const normalizedMessage = normalizeLogMessage(line);
+      return {
+        raw: line,
+        compare: applyIgnorePatterns(normalizedMessage || line, patternInfo),
+        message: normalizedMessage || line
+      };
+    }
     function flattenStructured(value, patternInfo, path = '$', entries = []) {
       if (Array.isArray(value)) {
         if (!value.length) entries.push({ id: path, prefixText: `${path}: `, valueText: '[]', compareValueText: '[]', fullText: `${path}: []` });
@@ -631,6 +673,56 @@
       }
       return { rows, unified, stats: { same, added, removed, changed } };
     }
+    function buildLogDiff(leftText, rightText, patternInfo) {
+      const inlinePatternInfo = buildLogInlinePatternInfo(patternInfo);
+      const leftLines = normalizeLines(leftText).map(line => buildLogLineInfo(line, patternInfo));
+      const rightLines = normalizeLines(rightText).map(line => buildLogLineInfo(line, patternInfo));
+      const raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare);
+      const rows = [];
+      let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
+      while (i < raw.length) {
+        if (raw[i].type === 'equal') {
+          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: escapeHtml(raw[i].a.raw), rightHtml: escapeHtml(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          same++;
+          i++;
+          continue;
+        }
+        const dels = [], ins = [];
+        while (i < raw.length && raw[i].type !== 'equal') {
+          if (raw[i].type === 'delete') dels.push(raw[i].a);
+          if (raw[i].type === 'insert') ins.push(raw[i].b);
+          i++;
+        }
+        const pairCount = Math.max(dels.length, ins.length);
+        for (let index = 0; index < pairCount; index++) {
+          const leftLine = dels[index], rightLine = ins[index];
+          if (leftLine != null && rightLine != null) {
+            const intra = diffChars(leftLine.raw, rightLine.raw, inlinePatternInfo);
+            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: leftLine.raw, rightText: rightLine.raw });
+            changed++;
+          } else if (leftLine != null) {
+            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: escapeHtml(leftLine.raw), rightHtml: '', leftText: leftLine.raw, rightText: '' });
+            removed++;
+          } else if (rightLine != null) {
+            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: escapeHtml(rightLine.raw), leftText: '', rightText: rightLine.raw });
+            added++;
+          }
+        }
+      }
+      const unified = [];
+      unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: 'mode: log' });
+      for (const row of rows) {
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: escapeHtml(row.leftText), text: row.leftText });
+        else if (row.kind === 'changed') {
+          unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
+          unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
+        } else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: escapeHtml(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: escapeHtml(row.rightText), text: row.rightText });
+      }
+      return { rows, unified, stats: { same, added, removed, changed } };
+    }
     function buildEnvDiff(leftText, rightText, patternInfo) {
       const normalizeEntries = entries => entries.map(item => {
         const valueText = item.valueText || '';
@@ -697,6 +789,7 @@
       try {
         let data;
         if (state.compareMode === 'env') data = buildEnvDiff(left, right, patternInfo);
+        else if (state.compareMode === 'log') data = buildLogDiff(left, right, patternInfo);
         else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right), patternInfo);
         else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right), patternInfo);
         else data = buildTextDiff(left, right, patternInfo);

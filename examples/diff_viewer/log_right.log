@@ -1,0 +1,31 @@
+﻿2026-04-14 09:16:01.923 INFO 22345 --- [main] com.example.HtmlToolsApplication : Starting HtmlToolsApplication on stage-box with PID 22345
+2026-04-14 09:16:02.210 INFO 22345 --- [main] com.example.HtmlToolsApplication : The following 1 profile is active: staging
+2026-04-14 09:16:02.704 INFO 22345 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 9090 (http)
+2026-04-14 09:16:03.081 INFO 22345 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Starting service [Tomcat]
+2026-04-14 09:16:03.082 INFO 22345 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-04-14 09:16:03.801 INFO 22345 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-14 09:16:04.455 INFO 22345 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:postgresql://stage-db:5432/htmltools user=service_user
+2026-04-14 09:16:04.902 INFO 22345 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-14 09:16:05.104 INFO 22345 --- [main] com.example.HtmlToolsApplication         : Started HtmlToolsApplication in 3.176 seconds
+
+2026-04-14 09:17:10.009 INFO 22345 --- [http-nio-9090-exec-1] c.e.api.DiffController                   : requestId=req-b101 compareMode=env leftLines=1782 rightLines=1782
+2026-04-14 09:17:10.071 DEBUG 22345 --- [http-nio-9090-exec-1] c.e.service.PatternService               : requestId=req-b101 compiled ignore patterns count=2
+2026-04-14 09:17:10.154 INFO 22345 --- [http-nio-9090-exec-1] c.e.service.DiffService                  : requestId=req-b101 diff generated added=531 removed=531 changed=312 unchanged=408
+2026-04-14 09:17:10.221 INFO 22345 --- [http-nio-9090-exec-1] c.e.api.DiffController                   : requestId=req-b101 status=200 durationMs=212 remoteIp=10.0.8.17
+
+2026-04-14 09:19:11.440 INFO 22345 --- [http-nio-9090-exec-2] c.e.api.DiffController                   : requestId=req-b102 compareMode=json leftLines=54 rightLines=61
+2026-04-14 09:19:11.502 DEBUG 22345 --- [http-nio-9090-exec-2] c.e.service.JsonCompareService           : requestId=req-b102 normalized arrays mode=by-key:name
+2026-04-14 09:19:11.644 WARN 22345 --- [http-nio-9090-exec-2] c.e.service.JsonCompareService           : requestId=req-b102 path=$.services[checkout].port value mismatch left=8080 right=9090
+2026-04-14 09:19:11.818 INFO 22345 --- [http-nio-9090-exec-2] c.e.api.DiffController                   : requestId=req-b102 status=200 durationMs=378 remoteIp=10.0.8.24
+
+[worker-3] INFO com.example.jobs.RetentionJob - Starting retention cleanup cutoff=2026-03-15
+[worker-3] INFO com.example.jobs.RetentionJob - Deleted 105 expired snapshots
+[worker-3] INFO com.example.jobs.RetentionJob - Finished retention cleanup durationMs=640
+
+10:04:01.210 INFO BrowserConsole: diff viewer mounted route=/tools/diff-viewer
+10:04:01.366 INFO BrowserConsole: user selected compare mode log
+10:04:04.617 INFO BrowserConsole: user loaded app-start-left.log and app-start-right.log
+10:04:08.912 INFO BrowserConsole: user toggled ignore patterns panel open
+10:04:11.004 DEBUG BrowserConsole: activePatterns=2 enabled=false
+10:04:15.220 ERROR BrowserConsole: comparison failed message="patternInfo is not defined"
+10:04:17.100 INFO BrowserConsole: comparison recovered after reload

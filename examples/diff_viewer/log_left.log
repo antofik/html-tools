@@ -1,0 +1,31 @@
+﻿2026-04-14 09:15:01.123 INFO 12345 --- [main] com.example.HtmlToolsApplication : Starting HtmlToolsApplication on dev-box with PID 12345
+2026-04-14 09:15:01.431 INFO 12345 --- [main] com.example.HtmlToolsApplication : No active profile set, falling back to default profile: default
+2026-04-14 09:15:02.010 INFO 12345 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-04-14 09:15:02.301 INFO 12345 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Starting service [Tomcat]
+2026-04-14 09:15:02.302 INFO 12345 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-04-14 09:15:02.998 INFO 12345 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-14 09:15:03.774 INFO 12345 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:postgresql://localhost:5432/htmltools user=dev_user
+2026-04-14 09:15:04.125 INFO 12345 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-14 09:15:04.661 WARN 12345 --- [main] o.hibernate.orm.deprecation              : HHH90000025: PostgreSQLDialect does not need to be specified explicitly
+2026-04-14 09:15:05.014 INFO 12345 --- [main] com.example.HtmlToolsApplication         : Started HtmlToolsApplication in 3.891 seconds
+
+2026-04-14 09:16:10.001 INFO 12345 --- [http-nio-8080-exec-1] c.e.api.DiffController                   : requestId=req-a001 compareMode=env leftLines=1782 rightLines=1782
+2026-04-14 09:16:10.042 DEBUG 12345 --- [http-nio-8080-exec-1] c.e.service.PatternService               : requestId=req-a001 compiled ignore patterns count=1
+2026-04-14 09:16:10.083 INFO 12345 --- [http-nio-8080-exec-1] c.e.service.DiffService                  : requestId=req-a001 diff generated added=531 removed=531 changed=450 unchanged=270
+2026-04-14 09:16:10.121 INFO 12345 --- [http-nio-8080-exec-1] c.e.api.DiffController                   : requestId=req-a001 status=200 durationMs=120 remoteIp=192.168.1.44
+
+2026-04-14 09:18:11.501 INFO 12345 --- [http-nio-8080-exec-2] c.e.api.DiffController                   : requestId=req-a002 compareMode=json leftLines=54 rightLines=61
+2026-04-14 09:18:11.580 DEBUG 12345 --- [http-nio-8080-exec-2] c.e.service.JsonCompareService           : requestId=req-a002 normalized arrays mode=by-index
+2026-04-14 09:18:11.744 WARN 12345 --- [http-nio-8080-exec-2] c.e.service.JsonCompareService           : requestId=req-a002 path=$.services[3].port value mismatch left=8080 right=9090
+2026-04-14 09:18:11.902 INFO 12345 --- [http-nio-8080-exec-2] c.e.api.DiffController                   : requestId=req-a002 status=200 durationMs=401 remoteIp=192.168.1.52
+
+[worker-1] INFO com.example.jobs.RetentionJob - Starting retention cleanup cutoff=2026-03-01
+[worker-1] INFO com.example.jobs.RetentionJob - Deleted 42 expired snapshots
+[worker-1] INFO com.example.jobs.RetentionJob - Finished retention cleanup durationMs=890
+
+10:02:11.919 INFO BrowserConsole: diff viewer mounted route=/tools/diff-viewer
+10:02:12.007 WARN BrowserConsole: ignore pattern panel is collapsed by default
+10:02:15.114 INFO BrowserConsole: user selected compare mode env
+10:02:19.317 INFO BrowserConsole: user loaded env_left.env and env_right.env
+10:02:22.422 INFO BrowserConsole: user toggled ignore patterns panel open
+10:02:25.631 DEBUG BrowserConsole: activePatterns=1 enabled=true
