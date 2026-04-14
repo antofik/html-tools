@@ -24,11 +24,17 @@
       --boolean: #7c3aed;
       --null: #dc2626;
       --toggle: #64748b;
+      --active-border: #22c55e;
+      --active-text: #15803d;
+      --active-bg: #f0fdf4;
+      --disabled-editor-bg: #f3f4f6;
+      --code-line-height: 20px;
+      --code-padding-y: 14px;
     }
 
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
-    .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+    .container { max-width: none; margin: 0; padding: 20px; }
 
     .app-header {
       display: flex;
@@ -61,6 +67,14 @@
       display: none;
     }
 
+    .layout.tree-hidden {
+      grid-template-columns: 1fr;
+    }
+
+    .layout.tree-hidden #treePanel {
+      display: none;
+    }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -79,6 +93,7 @@
       gap: 12px;
       background: var(--panel-soft);
       min-width: 0;
+      min-height: 64px;
     }
 
     .panel-title-row {
@@ -137,6 +152,44 @@
       overflow: hidden;
     }
 
+    .icon-btn.active,
+    .toggle-group .icon-btn.active {
+      border-color: var(--active-border);
+      color: var(--active-text);
+      background: var(--active-bg);
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .toggle-group .icon-btn {
+      border: none;
+      border-radius: 0;
+    }
+
+    .toggle-group .icon-btn + .icon-btn {
+      border-left: 1px solid var(--border);
+    }
+
+    .action-btn {
+      min-height: 34px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     .btn-icon {
       width: 16px;
       height: 16px;
@@ -157,47 +210,129 @@
       vector-effect: non-scaling-stroke;
     }
 
-    .editor {
-      width: 100%;
-      min-height: 76vh;
-      resize: vertical;
+    .viewer {
+      position: relative;
       border: 1px solid var(--border);
       border-radius: 12px;
       background: #fff;
-      color: var(--text);
-      padding: 14px;
+      overflow: hidden;
+    }
+
+    .viewer.progressing::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .progress-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 3px;
+      width: 0;
+      background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+      box-shadow: 0 1px 6px rgba(34, 197, 94, 0.35);
+      transition: width .12s linear, opacity .12s ease;
+      opacity: 0;
+      z-index: 3;
+    }
+
+    .progress-bar.visible { opacity: 1; }
+
+    .scroll-sync {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr);
+      min-height: 76vh;
+      max-height: 82vh;
+    }
+
+    .scroll-sync.wrap-enabled {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .line-numbers {
+      overflow: hidden;
+      position: relative;
+      border-right: 1px solid #f1f5f9;
+      background: #fafafa;
+      color: #94a3b8;
       font-family: var(--mono);
       font-size: 13px;
-      line-height: 1.55;
+      line-height: var(--code-line-height);
+      user-select: none;
+      white-space: pre;
+      text-align: right;
+      padding: var(--code-padding-y) 8px var(--code-padding-y) 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .line-numbers-inner {
+      transform: translateY(0);
+      will-change: transform;
+    }
+
+    .line-numbers.tree { line-height: var(--code-line-height); }
+
+    .editor,
+    .tree-wrap {
+      width: 100%;
+      min-height: 76vh;
+      max-height: 82vh;
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
       outline: none;
+      overflow: auto;
+      scrollbar-width: thin;
+    }
+
+    .editor {
+      resize: vertical;
+      padding: var(--code-padding-y) 14px;
+      line-height: var(--code-line-height);
       white-space: pre;
       word-break: normal;
-      overflow: auto;
+    }
+
+    .editor.processing-disabled {
+      background: var(--disabled-editor-bg);
     }
 
     .tree-wrap {
-      min-height: 76vh;
-      max-height: 82vh;
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fff;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.6;
-      padding: 8px 0 10px 0;
+      line-height: var(--code-line-height);
+      padding: var(--code-padding-y) 0;
     }
 
-    .tree-root { padding: 0 10px 8px 10px; }
+    .tree-root { padding: 0 10px; }
     .placeholder-text { color: var(--muted); padding: 10px 6px; }
 
     .node-line {
       display: flex;
       align-items: flex-start;
-      min-height: 24px;
+      min-height: var(--code-line-height);
       border-radius: 8px;
-      padding: 1px 6px 1px 2px;
+      padding: 0 6px 0 2px;
       min-width: 0;
+    }
+
+    .node-content {
+      min-width: 0;
+      white-space: pre;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+
+    .tree-wrap.wrap-enabled .node-content {
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .node-line:hover { background: #fafafa; }
@@ -210,7 +345,7 @@
       background: transparent;
       color: var(--toggle);
       width: 18px;
-      height: 22px;
+      height: var(--code-line-height);
       padding: 0;
       margin: 0;
       border-radius: 6px;
@@ -219,10 +354,10 @@
       justify-content: center;
       cursor: pointer;
       flex: 0 0 18px;
-      transform: translateY(1px);
+      transform: none;
     }
 
-    .toggle:hover { background: #f3f4f6; transform: translateY(1px); }
+    .toggle:hover { background: #f3f4f6; transform: none; }
     .toggle.placeholder { cursor: default; visibility: hidden; }
 
     .caret {
@@ -281,9 +416,14 @@
         <button id="wrapBtn" class="icon-btn" title="Перенос строк: выключен" aria-label="Перенос строк: выключен">
           <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M4 7h12"/><path d="M4 12h10a3 3 0 1 1 0 6h-1"/><path d="m15 16-2 2 2 2"/></svg></span>
         </button>
-        <button id="toggleJsonBtn" class="icon-btn" title="Скрыть JSON-панель" aria-label="Скрыть JSON-панель">
-          <span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="1.5"/><path d="M13 7h8"/><path d="M13 12h8"/><path d="M13 17h8"/></svg></span>
-        </button>
+        <div class="toggle-group" aria-label="Panel visibility">
+          <button id="toggleJsonBtn" class="icon-btn active" title="Скрыть JSON-панель" aria-label="Скрыть JSON-панель">
+            <span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="1.5"/><path d="M13 7h8"/><path d="M13 12h8"/><path d="M13 17h8"/></svg></span>
+          </button>
+          <button id="toggleTreeBtn" class="icon-btn active" title="Скрыть tree-панель" aria-label="Скрыть tree-панель">
+            <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 7h8"/><path d="M3 12h8"/><path d="M3 17h8"/><rect x="14" y="5" width="7" height="14" rx="1.5"/></svg></span>
+          </button>
+        </div>
         <button id="clearBtn" class="icon-btn" title="Очистить" aria-label="Очистить">
           <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span>
         </button>
@@ -297,14 +437,26 @@
             <div class="panel-title">JSON</div>
             <div id="status" class="status">Готово</div>
           </div>
+          <div class="panel-actions">
+            <button id="pasteBtn" class="action-btn" type="button" title="Paste from clipboard" aria-label="Paste from clipboard">
+              <span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M9 2h6v4H9z"/><path d="M7 6H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1"/></svg></span>
+              <span>Paste</span>
+            </button>
+          </div>
         </div>
         <div class="panel-body">
           <input id="fileInput" type="file" accept=".json,application/json,.txt" hidden />
-          <textarea id="editor" class="editor" spellcheck="false"></textarea>
+          <div id="editorViewer" class="viewer">
+            <div id="editorProgress" class="progress-bar"></div>
+            <div class="scroll-sync">
+              <div id="editorLineNumbers" class="line-numbers"><div class="line-numbers-inner"></div></div>
+              <textarea id="editor" class="editor" spellcheck="false"></textarea>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="treePanel">
         <div class="panel-header">
           <div class="panel-title-row">
             <div class="panel-title">Tree</div>
@@ -320,8 +472,14 @@
           </div>
         </div>
         <div class="panel-body">
-          <div id="treeWrap" class="tree-wrap">
-            <div id="treeRoot" class="tree-root"><div class="placeholder-text">Пусто</div></div>
+          <div id="treeViewer" class="viewer">
+            <div id="treeProgress" class="progress-bar"></div>
+            <div class="scroll-sync">
+              <div id="treeLineNumbers" class="line-numbers tree"><div class="line-numbers-inner"></div></div>
+              <div id="treeWrap" class="tree-wrap">
+                <div id="treeRoot" class="tree-root"><div class="placeholder-text">Пусто</div></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -329,10 +487,51 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'json_formatter_state_v15';
+    const STORAGE_KEY = 'json_formatter_state_v16';
     const SAVE_DEBOUNCE_MS = 250;
     const LARGE_TEXT_THRESHOLD = 1_500_000;
+    const TREE_AUTO_HIDE_LINE_THRESHOLD = 10_000;
     const MASSIVE_NODE_THRESHOLD = 2000;
+    const FORMAT_WORKER_SCRIPT = `
+      self.onmessage = event => {
+        const { text, includeParsed } = event.data || {};
+        const isPrimitive = value => value === null || ['string', 'number', 'boolean'].includes(typeof value);
+        const formatPrimitive = value => {
+          if (typeof value === 'string') return JSON.stringify(value);
+          if (value === null) return 'null';
+          return String(value);
+        };
+        const isNumberArray = arr => Array.isArray(arr) && arr.every(v => typeof v === 'number' && Number.isFinite(v));
+        const repeatIndent = (level, indent = '  ') => indent.repeat(level);
+        const formatCustom = (value, level = 0) => {
+          const current = repeatIndent(level);
+          const next = repeatIndent(level + 1);
+          if (value === null || typeof value !== 'object') return formatPrimitive(value);
+          if (Array.isArray(value)) {
+            if (value.length === 0) return '[]';
+            if (isNumberArray(value)) return '[ ' + value.map(v => formatPrimitive(v)).join(', ') + ' ]';
+            const allPrimitives = value.every(v => isPrimitive(v));
+            if (allPrimitives) {
+              const inline = '[ ' + value.map(v => formatPrimitive(v)).join(', ') + ' ]';
+              if (inline.length <= 120) return inline;
+            }
+            const items = value.map(item => \`\${next}\${formatCustom(item, level + 1)}\`);
+            return '[\\n' + items.join(',\\n') + '\\n' + current + ']';
+          }
+          const entries = Object.entries(value);
+          if (entries.length === 0) return '{}';
+          const lines = entries.map(([key, val]) => \`\${next}\${JSON.stringify(key)}: \${formatCustom(val, level + 1)}\`);
+          return '{\\n' + lines.join(',\\n') + '\\n' + current + '}';
+        };
+        try {
+          const parsed = JSON.parse(text);
+          const formatted = formatCustom(parsed);
+          self.postMessage({ ok: true, formatted, parsed: includeParsed ? parsed : null });
+        } catch (error) {
+          self.postMessage({ ok: false, error: error.message || String(error) });
+        }
+      };
+    `;
 
     const state = {
       parsed: null,
@@ -341,7 +540,18 @@
       collapsed: new Set(),
       settings: {
         wrapEnabled: false,
-        showJsonPanel: true
+        showJsonPanel: true,
+        showTreePanel: true
+      },
+      processing: {
+        token: 0,
+        active: false
+      },
+      worker: null,
+      workerUrl: null,
+      syncScroll: {
+        editor: false,
+        tree: false
       },
       saveTimer: null
     };
@@ -349,17 +559,27 @@
     const els = {
       layout: document.getElementById('layout'),
       jsonPanel: document.getElementById('jsonPanel'),
+      treePanel: document.getElementById('treePanel'),
       fileInput: document.getElementById('fileInput'),
+      editorViewer: document.getElementById('editorViewer'),
+      editorProgress: document.getElementById('editorProgress'),
+      editorLineNumbers: document.getElementById('editorLineNumbers'),
       editor: document.getElementById('editor'),
       status: document.getElementById('status'),
       meta: document.getElementById('meta'),
+      treeViewer: document.getElementById('treeViewer'),
+      treeProgress: document.getElementById('treeProgress'),
+      treeLineNumbers: document.getElementById('treeLineNumbers'),
+      treeWrap: document.getElementById('treeWrap'),
       treeRoot: document.getElementById('treeRoot'),
       formatBtn: document.getElementById('formatBtn'),
+      pasteBtn: document.getElementById('pasteBtn'),
       loadBtn: document.getElementById('loadBtn'),
       downloadBtn: document.getElementById('downloadBtn'),
       copyBtn: document.getElementById('copyBtn'),
       wrapBtn: document.getElementById('wrapBtn'),
       toggleJsonBtn: document.getElementById('toggleJsonBtn'),
+      toggleTreeBtn: document.getElementById('toggleTreeBtn'),
       clearBtn: document.getElementById('clearBtn'),
       expandBtn: document.getElementById('expandBtn'),
       collapseBtn: document.getElementById('collapseBtn'),
@@ -390,22 +610,44 @@
       els.meta.textContent = parts.join(' • ');
     }
 
+    function getLineCount(text) {
+      if (!text) return 0;
+      return String(text).split('\n').length;
+    }
+
+    function shouldAutoHideTreeForText(text) {
+      return getLineCount(text) > TREE_AUTO_HIDE_LINE_THRESHOLD;
+    }
+
     function updateButtons(enabled) {
       els.downloadBtn.disabled = !enabled;
       els.copyBtn.disabled = !enabled;
-      els.expandBtn.disabled = !enabled;
-      els.collapseBtn.disabled = !enabled;
+      els.expandBtn.disabled = !enabled || !state.settings.showTreePanel;
+      els.collapseBtn.disabled = !enabled || !state.settings.showTreePanel;
     }
 
     function updateWrap() {
+      els.wrapBtn.classList.toggle('active', state.settings.wrapEnabled);
+      const editorSync = els.editorViewer.querySelector('.scroll-sync');
+      const treeSync = els.treeViewer.querySelector('.scroll-sync');
       if (state.settings.wrapEnabled) {
         els.editor.style.whiteSpace = 'pre-wrap';
         els.editor.style.wordBreak = 'break-word';
+        els.treeWrap.classList.add('wrap-enabled');
+        els.editorLineNumbers.style.display = 'none';
+        els.treeLineNumbers.style.display = 'none';
+        if (editorSync) editorSync.classList.add('wrap-enabled');
+        if (treeSync) treeSync.classList.add('wrap-enabled');
         els.wrapBtn.title = 'Перенос строк: включён';
         els.wrapBtn.setAttribute('aria-label', 'Перенос строк: включён');
       } else {
         els.editor.style.whiteSpace = 'pre';
         els.editor.style.wordBreak = 'normal';
+        els.treeWrap.classList.remove('wrap-enabled');
+        els.editorLineNumbers.style.display = '';
+        els.treeLineNumbers.style.display = '';
+        if (editorSync) editorSync.classList.remove('wrap-enabled');
+        if (treeSync) treeSync.classList.remove('wrap-enabled');
         els.wrapBtn.title = 'Перенос строк: выключен';
         els.wrapBtn.setAttribute('aria-label', 'Перенос строк: выключен');
       }
@@ -413,12 +655,31 @@
 
     function updateJsonPanelVisibility() {
       els.layout.classList.toggle('json-hidden', !state.settings.showJsonPanel);
+      els.toggleJsonBtn.classList.toggle('active', state.settings.showJsonPanel);
       if (state.settings.showJsonPanel) {
         els.toggleJsonBtn.title = 'Скрыть JSON-панель';
         els.toggleJsonBtn.setAttribute('aria-label', 'Скрыть JSON-панель');
       } else {
         els.toggleJsonBtn.title = 'Показать JSON-панель';
         els.toggleJsonBtn.setAttribute('aria-label', 'Показать JSON-панель');
+      }
+    }
+
+    function updateTreePanelVisibility() {
+      els.layout.classList.toggle('tree-hidden', !state.settings.showTreePanel);
+      els.toggleTreeBtn.classList.toggle('active', state.settings.showTreePanel);
+      if (state.settings.showTreePanel) {
+        els.toggleTreeBtn.title = 'Скрыть tree-панель';
+        els.toggleTreeBtn.setAttribute('aria-label', 'Скрыть tree-панель');
+        if (state.parsed !== null) {
+          renderTreeRoot();
+        } else if (els.editor.value.trim()) {
+          void parseAndFormat({ source: 'toggle-tree' });
+        }
+      } else {
+        els.toggleTreeBtn.title = 'Показать tree-панель';
+        els.toggleTreeBtn.setAttribute('aria-label', 'Показать tree-панель');
+        updateButtons(state.parsed !== null);
       }
     }
 
@@ -429,6 +690,87 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function updateLineNumbers(target, text, className = '') {
+      const lineCount = Math.max(1, String(text || '').split('\n').length);
+      const lines = new Array(lineCount);
+      for (let i = 0; i < lineCount; i++) lines[i] = String(i + 1);
+      target.className = 'line-numbers' + (className ? ' ' + className : '');
+      const inner = target.querySelector('.line-numbers-inner');
+      if (inner) inner.textContent = lines.join('\n');
+    }
+
+    function syncLineNumberScroll(lineNumbersEl, sourceEl) {
+      const inner = lineNumbersEl.querySelector('.line-numbers-inner');
+      if (!inner) return;
+      inner.style.transform = `translateY(${-sourceEl.scrollTop}px)`;
+    }
+
+    function setProgress(viewerEl, progressEl, ratio, visible) {
+      viewerEl.classList.toggle('progressing', !!visible);
+      progressEl.classList.toggle('visible', !!visible);
+      progressEl.style.width = `${Math.max(0, Math.min(100, ratio * 100))}%`;
+    }
+
+    function beginProcessing(statusText = 'Обработка...') {
+      state.processing.token += 1;
+      state.processing.active = true;
+      els.formatBtn.disabled = true;
+      els.expandBtn.disabled = true;
+      els.collapseBtn.disabled = true;
+      els.editor.classList.add('processing-disabled');
+      setStatus(statusText, '');
+      setProgress(els.editorViewer, els.editorProgress, 0.08, true);
+      setProgress(els.treeViewer, els.treeProgress, 0.08, state.settings.showTreePanel);
+      return state.processing.token;
+    }
+
+    function updateProcessing(token, ratio, statusText = 'Обработка...') {
+      if (token !== state.processing.token || !state.processing.active) return false;
+      setStatus(statusText, '');
+      setProgress(els.editorViewer, els.editorProgress, ratio, true);
+      setProgress(els.treeViewer, els.treeProgress, ratio, state.settings.showTreePanel);
+      return true;
+    }
+
+    function finishProcessing(token) {
+      if (token !== state.processing.token) return;
+      state.processing.active = false;
+      els.formatBtn.disabled = false;
+      els.editor.classList.remove('processing-disabled');
+      setProgress(els.editorViewer, els.editorProgress, 1, false);
+      setProgress(els.treeViewer, els.treeProgress, 1, false);
+    }
+
+    function getFormatWorker() {
+      if (state.worker) return state.worker;
+      if (!state.workerUrl) state.workerUrl = URL.createObjectURL(new Blob([FORMAT_WORKER_SCRIPT], { type: 'text/javascript' }));
+      state.worker = new Worker(state.workerUrl);
+      return state.worker;
+    }
+
+    function runFormatWorker(text, includeParsed) {
+      return new Promise((resolve, reject) => {
+        const worker = getFormatWorker();
+        const handleMessage = event => {
+          cleanup();
+          const payload = event.data || {};
+          if (payload.ok) resolve(payload);
+          else reject(new Error(payload.error || 'Unknown worker error'));
+        };
+        const handleError = error => {
+          cleanup();
+          reject(error instanceof Error ? error : new Error(String(error?.message || error)));
+        };
+        const cleanup = () => {
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+        };
+        worker.addEventListener('message', handleMessage);
+        worker.addEventListener('error', handleError);
+        worker.postMessage({ text, includeParsed });
+      });
     }
 
     function isPrimitive(value) {
@@ -504,8 +846,8 @@
     }
 
     function shortSummary(value) {
-      if (Array.isArray(value)) return `[${value.length}]`;
-      if (value && typeof value === 'object') return `{${Object.keys(value).length}}`;
+      if (Array.isArray(value)) return `[#${value.length}]`;
+      if (value && typeof value === 'object') return `{#${Object.keys(value).length}}`;
       return '';
     }
 
@@ -567,6 +909,7 @@
       line.appendChild(toggle);
 
       const content = document.createElement('span');
+      content.className = 'node-content';
 
       if (keyName !== null) {
         const key = document.createElement('span');
@@ -582,6 +925,19 @@
 
       if (!isContainer) {
         content.insertAdjacentHTML('beforeend', primitiveNodeHtml(value));
+        if (trailingComma) {
+          const comma = document.createElement('span');
+          comma.className = 'node-comma';
+          comma.textContent = ',';
+          content.appendChild(comma);
+        }
+        line.appendChild(content);
+        wrapper.appendChild(line);
+        return wrapper;
+      }
+
+      if (isArray && value.length === 0) {
+        content.insertAdjacentHTML('beforeend', '<span class="node-bracket">[]</span>');
         if (trailingComma) {
           const comma = document.createElement('span');
           comma.className = 'node-comma';
@@ -695,6 +1051,8 @@
         }
 
         childrenWrap.appendChild(frag);
+        updateLineNumbers(els.treeLineNumbers, els.treeRoot.innerText || '1', 'tree');
+        syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
 
         for (const childNode of newNodes) {
           if (childNode.dataset.isContainer === 'true') {
@@ -732,15 +1090,27 @@
       }
 
       applyCollapsedState(node);
+      updateLineNumbers(els.treeLineNumbers, els.treeRoot.innerText || '1', 'tree');
+      syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
       scheduleSave();
     }
 
     function renderTreeRoot() {
+      updateLineNumbers(els.treeLineNumbers, '', 'tree');
+      if (!state.settings.showTreePanel) {
+        els.treeRoot.innerHTML = '<div class="placeholder-text">Tree hidden</div>';
+        updateButtons(state.parsed !== null);
+        updateMeta();
+        updateLineNumbers(els.editorLineNumbers, els.editor.value);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
+        return;
+      }
       els.treeRoot.innerHTML = '';
       if (state.parsed === null) {
         els.treeRoot.innerHTML = '<div class="placeholder-text">Пусто</div>';
         updateButtons(false);
         updateMeta();
+        updateLineNumbers(els.treeLineNumbers, '1', 'tree');
         return;
       }
 
@@ -750,6 +1120,8 @@
       if (root.dataset.collapsed !== 'true') ensureChildrenBuilt(root);
       updateButtons(true);
       updateMeta();
+      updateLineNumbers(els.treeLineNumbers, els.treeRoot.innerText || '1', 'tree');
+      syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
     }
 
     function collapseAll() {
@@ -839,6 +1211,78 @@
       }
     }
 
+    function nextFrame() {
+      return new Promise(resolve => requestAnimationFrame(() => resolve()));
+    }
+
+    async function parseAndFormat(options = {}) {
+      const { source = 'manual' } = options;
+      const text = els.editor.value.trim();
+      if (!text) {
+        state.parsed = null;
+        state.collapsed.clear();
+        renderTreeRoot();
+        updateLineNumbers(els.editorLineNumbers, els.editor.value);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
+        setStatus('Пусто', '');
+        scheduleSave();
+        return;
+      }
+
+      const shouldAutoHideTree = shouldAutoHideTreeForText(text);
+      if (shouldAutoHideTree && state.settings.showTreePanel) {
+        state.settings.showTreePanel = false;
+        updateTreePanelVisibility();
+      }
+
+      const token = beginProcessing(source === 'paste' ? 'Вставка и форматирование...' : 'Форматирование JSON...');
+      try {
+        await nextFrame();
+        if (!updateProcessing(token, 0.18, 'Разбор и форматирование JSON...')) return;
+        const workerResult = await runFormatWorker(text, state.settings.showTreePanel);
+        if (!updateProcessing(token, 0.62, 'Применение результата...')) return;
+        const formatted = workerResult.formatted;
+        els.editor.value = formatted;
+        updateLineNumbers(els.editorLineNumbers, formatted);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
+        state.collapsed.clear();
+        state.parsed = state.settings.showTreePanel ? workerResult.parsed : null;
+
+        if (state.settings.showTreePanel && typeof state.parsed === 'object' && state.parsed !== null && formatted.length > LARGE_TEXT_THRESHOLD) {
+          state.collapsed.add('root');
+        }
+
+        if (state.settings.showTreePanel) {
+          if (!updateProcessing(token, 0.82, 'Построение tree view...')) return;
+          await nextFrame();
+          renderTreeRoot();
+        } else {
+          els.treeRoot.innerHTML = '<div class="placeholder-text">Tree hidden</div>';
+          updateButtons(true);
+          updateMeta();
+        }
+
+        setStatus(
+          formatted.length > LARGE_TEXT_THRESHOLD
+            ? 'JSON отформатирован. Дерево стартует свёрнутым для больших данных.'
+            : 'JSON отформатирован.',
+          'ok'
+        );
+        if (shouldAutoHideTree) {
+          setStatus(`JSON отформатирован. Tree view автоматически отключён: ${getLineCount(formatted).toLocaleString('ru-RU')} lines.`, 'ok');
+        }
+        finishProcessing(token);
+        scheduleSave();
+      } catch (err) {
+        state.parsed = null;
+        renderTreeRoot();
+        updateLineNumbers(els.editorLineNumbers, els.editor.value);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
+        finishProcessing(token);
+        setStatus('Ошибка JSON: ' + err.message, 'error');
+      }
+    }
+
     function saveStateNow() {
       const payload = {
         text: els.editor.value,
@@ -874,10 +1318,16 @@
         if (saved.settings && typeof saved.settings === 'object') {
           if (typeof saved.settings.wrapEnabled === 'boolean') state.settings.wrapEnabled = saved.settings.wrapEnabled;
           if (typeof saved.settings.showJsonPanel === 'boolean') state.settings.showJsonPanel = saved.settings.showJsonPanel;
+          if (typeof saved.settings.showTreePanel === 'boolean') state.settings.showTreePanel = saved.settings.showTreePanel;
+        }
+
+        if (shouldAutoHideTreeForText(els.editor.value)) {
+          state.settings.showTreePanel = false;
         }
 
         updateWrap();
         updateJsonPanelVisibility();
+        updateTreePanelVisibility();
         updateMeta();
 
         if (els.editor.value.trim()) {
@@ -927,11 +1377,49 @@
         els.editor.value = typeof reader.result === 'string' ? reader.result : '';
         state.fileName = file.name;
         state.fileSize = file.size;
+        updateLineNumbers(els.editorLineNumbers, els.editor.value);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
         updateMeta();
         setStatus(`Загружен ${file.name}`, '');
         scheduleSave();
       };
       reader.readAsText(file);
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) return;
+        els.editor.value = text;
+        state.fileName = '';
+        state.fileSize = new Blob([text]).size;
+        updateMeta();
+        updateLineNumbers(els.editorLineNumbers, text);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
+        await parseAndFormat({ source: 'paste' });
+      } catch {
+        setStatus('Не удалось прочитать буфер обмена', 'error');
+      }
+    }
+
+    function syncEditorScrollToTree() {
+      if (state.syncScroll.tree) return;
+      state.syncScroll.editor = true;
+      const ratio = els.editor.scrollTop / Math.max(els.editor.scrollHeight - els.editor.clientHeight, 1);
+      els.treeWrap.scrollTop = ratio * Math.max(els.treeWrap.scrollHeight - els.treeWrap.clientHeight, 0);
+      syncLineNumberScroll(els.editorLineNumbers, els.editor);
+      syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
+      state.syncScroll.editor = false;
+    }
+
+    function syncTreeScrollToEditor() {
+      if (state.syncScroll.editor) return;
+      state.syncScroll.tree = true;
+      const ratio = els.treeWrap.scrollTop / Math.max(els.treeWrap.scrollHeight - els.treeWrap.clientHeight, 1);
+      els.editor.scrollTop = ratio * Math.max(els.editor.scrollHeight - els.editor.clientHeight, 0);
+      syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
+      syncLineNumberScroll(els.editorLineNumbers, els.editor);
+      state.syncScroll.tree = false;
     }
 
     function clearAll() {
@@ -941,12 +1429,15 @@
       state.fileSize = 0;
       state.collapsed.clear();
       renderTreeRoot();
+      updateLineNumbers(els.editorLineNumbers, '');
+      syncLineNumberScroll(els.editorLineNumbers, els.editor);
       updateMeta();
       setStatus('Пусто', '');
       scheduleSave();
     }
 
-    els.formatBtn.addEventListener('click', parseAndFormat);
+    els.formatBtn.addEventListener('click', () => { void parseAndFormat(); });
+    els.pasteBtn.addEventListener('click', () => { void pasteFromClipboard(); });
     els.loadBtn.addEventListener('click', () => els.fileInput.click());
     els.fileInput.addEventListener('change', e => loadFile(e.target.files?.[0]));
     els.downloadBtn.addEventListener('click', downloadJson);
@@ -961,27 +1452,53 @@
       updateJsonPanelVisibility();
       scheduleSave();
     });
+    els.toggleTreeBtn.addEventListener('click', () => {
+      state.settings.showTreePanel = !state.settings.showTreePanel;
+      updateTreePanelVisibility();
+      scheduleSave();
+    });
     els.clearBtn.addEventListener('click', clearAll);
     els.expandBtn.addEventListener('click', expandAll);
     els.collapseBtn.addEventListener('click', collapseAll);
 
     els.editor.addEventListener('input', () => {
       updateMeta();
+      updateLineNumbers(els.editorLineNumbers, els.editor.value);
+      syncLineNumberScroll(els.editorLineNumbers, els.editor);
       scheduleSave();
     });
+
+    els.editor.addEventListener('paste', () => {
+      setTimeout(() => {
+        updateMeta();
+        updateLineNumbers(els.editorLineNumbers, els.editor.value);
+        syncLineNumberScroll(els.editorLineNumbers, els.editor);
+        void parseAndFormat({ source: 'paste' });
+      }, 0);
+    });
+
+    els.editor.addEventListener('scroll', syncEditorScrollToTree, { passive: true });
+    els.treeWrap.addEventListener('scroll', syncTreeScrollToEditor, { passive: true });
 
     els.editor.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        parseAndFormat();
+        void parseAndFormat();
       }
     });
 
-    window.addEventListener('beforeunload', saveStateNow);
+    window.addEventListener('beforeunload', () => {
+      saveStateNow();
+      if (state.worker) state.worker.terminate();
+      if (state.workerUrl) URL.revokeObjectURL(state.workerUrl);
+    });
 
     updateWrap();
     updateJsonPanelVisibility();
+    updateTreePanelVisibility();
     restoreState();
+    updateLineNumbers(els.editorLineNumbers, els.editor.value);
+    syncLineNumberScroll(els.editorLineNumbers, els.editor);
     if (!els.editor.value) updateMeta();
   </script>
 </body>

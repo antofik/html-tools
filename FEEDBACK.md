@@ -1,6 +1,3 @@
-# Diff viewer
-- allow skipping lines with some patterns (e.g. keys with passwords)
-
 # JSON formatter
 - very slow on large jsons (hangs)
 - show progress bar during text processing
