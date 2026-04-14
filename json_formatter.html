@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JSON formatter</title>
+  <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23ffffff"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="%23e5e7eb" stroke-width="2"/><text x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="800" fill="%230f172a">{}</text></svg>' />
   <style>
     :root {
       --bg: #ffffff;
@@ -34,13 +35,14 @@
 
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
-    .container { max-width: none; margin: 0; padding: 20px; }
+    .container { width: 100%; max-width: none; margin: 0; padding: 0; }
 
     .app-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
+      padding: 20px 20px 0;
       margin-bottom: 16px;
     }
 
@@ -57,6 +59,7 @@
       display: grid;
       grid-template-columns: minmax(360px, 1fr) minmax(420px, 1.1fr);
       gap: 16px;
+      padding: 0;
     }
 
     .layout.json-hidden {
@@ -126,7 +129,7 @@
     .status.ok { color: #047857; }
     .status.error { color: #b91c1c; }
 
-    .panel-body { padding: 14px; }
+    .panel-body { padding: 0; }
 
     button {
       appearance: none;
@@ -213,7 +216,7 @@
     .viewer {
       position: relative;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 0;
       background: #fff;
       overflow: hidden;
     }
@@ -323,6 +326,8 @@
     }
 
     .node-content {
+      display: block;
+      flex: 1 1 auto;
       min-width: 0;
       white-space: pre;
       word-break: normal;
@@ -367,9 +372,7 @@
       transition: transform .12s ease;
     }
 
-    .tree-node[data-collapsed="true"] > .node-line .caret { transform: rotate(-90deg); }
-    .tree-node[data-collapsed="true"] > .children,
-    .tree-node[data-collapsed="true"] > .closing-line { display: none; }
+    .toggle[data-collapsed="true"] .caret { transform: rotate(-90deg); }
 
     .node-key { color: var(--key); font-weight: 600; }
     .node-colon, .node-comma, .node-bracket { color: #6b7280; }
@@ -378,7 +381,6 @@
     .node-value.boolean { color: var(--boolean); }
     .node-value.null { color: var(--null); }
     .collapsed-inline { color: var(--muted); margin-left: 0; }
-    .children { margin: 0; padding: 0; }
 
     @media (max-width: 1180px) {
       .app-header {
@@ -694,8 +696,13 @@
 
     function updateLineNumbers(target, text, className = '') {
       const lineCount = Math.max(1, String(text || '').split('\n').length);
-      const lines = new Array(lineCount);
-      for (let i = 0; i < lineCount; i++) lines[i] = String(i + 1);
+      updateLineNumbersByCount(target, lineCount, className);
+    }
+
+    function updateLineNumbersByCount(target, lineCount, className = '') {
+      const normalizedCount = Math.max(1, Number(lineCount) || 1);
+      const lines = new Array(normalizedCount);
+      for (let i = 0; i < normalizedCount; i++) lines[i] = String(i + 1);
       target.className = 'line-numbers' + (className ? ' ' + className : '');
       const inner = target.querySelector('.line-numbers-inner');
       if (inner) inner.textContent = lines.join('\n');
@@ -821,19 +828,40 @@
       return '{\n' + lines.join(',\n') + '\n' + current + '}';
     }
 
-    function primitiveNodeHtml(value) {
+    function createPrimitiveValueNode(value) {
       const type = value === null ? 'null' : typeof value;
       const shown = type === 'string' ? JSON.stringify(value) : String(value);
-      return `<span class="node-value ${type}">${escapeHtml(shown)}</span>`;
+      const node = document.createElement('span');
+      node.className = `node-value ${type}`;
+      node.textContent = shown;
+      return node;
     }
 
-    function inlineArrayHtml(arr) {
-      const parts = arr.map(v => {
-        const type = v === null ? 'null' : typeof v;
-        const shown = type === 'string' ? JSON.stringify(v) : String(v);
-        return `<span class="node-value ${type}">${escapeHtml(shown)}</span>`;
-      });
-      return `[ ${parts.join('<span class="node-comma">, </span>')} ]`;
+    function appendInlineArray(content, arr) {
+      const open = document.createElement('span');
+      open.className = 'node-bracket';
+      open.textContent = '[';
+      content.appendChild(open);
+
+      if (arr.length > 0) {
+        content.appendChild(document.createTextNode(' '));
+        arr.forEach((item, index) => {
+          content.appendChild(createPrimitiveValueNode(item));
+          if (index < arr.length - 1) {
+            const comma = document.createElement('span');
+            comma.className = 'node-comma';
+            comma.textContent = ',';
+            content.appendChild(comma);
+            content.appendChild(document.createTextNode(' '));
+          }
+        });
+        content.appendChild(document.createTextNode(' '));
+      }
+
+      const close = document.createElement('span');
+      close.className = 'node-bracket';
+      close.textContent = ']';
+      content.appendChild(close);
     }
 
     function isInlineTreeArray(arr) {
@@ -870,239 +898,165 @@
       }
     }
 
-    function applyCollapsedState(node) {
-      const collapsed = node.dataset.collapsed === 'true';
-      const lineContent = node.querySelector(':scope > .node-line > span:last-child');
-      if (!lineContent) return;
-
-      const collapsedInline = lineContent.querySelector('.collapsed-inline');
-      const brackets = lineContent.querySelectorAll('.node-bracket');
-      const commas = lineContent.querySelectorAll('.node-comma');
-
-      if (collapsedInline) collapsedInline.style.display = collapsed ? '' : 'none';
-      if (brackets[1]) brackets[1].style.display = collapsed ? '' : 'none';
-      if (commas.length && node.dataset.isContainer === 'true') commas[commas.length - 1].style.display = collapsed ? '' : 'none';
-    }
-
-    function createNodeShell(path, keyName, level, trailingComma) {
-      const value = getValueByPath(path);
-      const isContainer = value !== null && typeof value === 'object';
-      const isArray = Array.isArray(value);
-
-      const wrapper = document.createElement('div');
-      wrapper.className = 'tree-node';
-      wrapper.dataset.path = path;
-      wrapper.dataset.level = String(level);
-      wrapper.dataset.collapsed = state.collapsed.has(path) ? 'true' : 'false';
-      wrapper.dataset.isContainer = isContainer ? 'true' : 'false';
-      wrapper.dataset.built = 'false';
-
-      const line = document.createElement('div');
-      line.className = 'node-line';
-      createIndent(line, level);
-
+    function createTreeToggle(path, collapsed, isContainer) {
       const toggle = document.createElement('button');
       toggle.className = 'toggle' + (isContainer ? '' : ' placeholder');
       toggle.type = 'button';
+      toggle.dataset.path = path;
+      toggle.dataset.collapsed = collapsed ? 'true' : 'false';
       toggle.innerHTML = `<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-      if (isContainer) toggle.addEventListener('click', () => toggleNode(path));
-      line.appendChild(toggle);
+      if (!isContainer) {
+        toggle.tabIndex = -1;
+        toggle.setAttribute('aria-hidden', 'true');
+        toggle.disabled = true;
+      } else {
+        toggle.title = collapsed ? 'Expand' : 'Collapse';
+        toggle.setAttribute('aria-label', collapsed ? 'Expand node' : 'Collapse node');
+      }
+      return toggle;
+    }
+
+    function appendKeyPrefix(content, keyName) {
+      if (keyName === null) return;
+
+      const key = document.createElement('span');
+      key.className = 'node-key';
+      key.textContent = JSON.stringify(String(keyName));
+      content.appendChild(key);
+
+      const colon = document.createElement('span');
+      colon.className = 'node-colon';
+      colon.textContent = ': ';
+      content.appendChild(colon);
+    }
+
+    function appendTrailingComma(content, trailingComma) {
+      if (!trailingComma) return;
+      const comma = document.createElement('span');
+      comma.className = 'node-comma';
+      comma.textContent = ',';
+      content.appendChild(comma);
+    }
+
+    function createTreeLine(level, path, keyName, isContainer, collapsed) {
+      const line = document.createElement('div');
+      line.className = 'node-line';
+      line.dataset.path = path;
+      line.dataset.level = String(level);
+      createIndent(line, level);
+      line.appendChild(createTreeToggle(path, collapsed, isContainer));
 
       const content = document.createElement('span');
       content.className = 'node-content';
+      appendKeyPrefix(content, keyName);
+      line.appendChild(content);
+      return { line, content };
+    }
 
-      if (keyName !== null) {
-        const key = document.createElement('span');
-        key.className = 'node-key';
-        key.textContent = JSON.stringify(String(keyName));
-        content.appendChild(key);
-
-        const colon = document.createElement('span');
-        colon.className = 'node-colon';
-        colon.textContent = ': ';
-        content.appendChild(colon);
-      }
-
-      if (!isContainer) {
-        content.insertAdjacentHTML('beforeend', primitiveNodeHtml(value));
-        if (trailingComma) {
-          const comma = document.createElement('span');
-          comma.className = 'node-comma';
-          comma.textContent = ',';
-          content.appendChild(comma);
-        }
-        line.appendChild(content);
-        wrapper.appendChild(line);
-        return wrapper;
-      }
-
-      if (isArray && value.length === 0) {
-        content.insertAdjacentHTML('beforeend', '<span class="node-bracket">[]</span>');
-        if (trailingComma) {
-          const comma = document.createElement('span');
-          comma.className = 'node-comma';
-          comma.textContent = ',';
-          content.appendChild(comma);
-        }
-        line.appendChild(content);
-        wrapper.appendChild(line);
-        return wrapper;
-      }
-
-      if (isArray && isInlineTreeArray(value)) {
-        content.insertAdjacentHTML('beforeend', inlineArrayHtml(value));
-        if (trailingComma) {
-          const comma = document.createElement('span');
-          comma.className = 'node-comma';
-          comma.textContent = ',';
-          content.appendChild(comma);
-        }
-        line.appendChild(content);
-        wrapper.appendChild(line);
-        return wrapper;
-      }
-
+    function appendContainerOpen(content, value, collapsed, trailingComma) {
       const open = document.createElement('span');
       open.className = 'node-bracket';
-      open.textContent = isArray ? '[' : '{';
+      open.textContent = Array.isArray(value) ? '[' : '{';
       content.appendChild(open);
+
+      if (!collapsed) return;
 
       const collapsedInline = document.createElement('span');
       collapsedInline.className = 'collapsed-inline';
       collapsedInline.textContent = shortSummary(value);
-      if (wrapper.dataset.collapsed !== 'true') collapsedInline.style.display = 'none';
       content.appendChild(collapsedInline);
 
-      const closeInline = document.createElement('span');
-      closeInline.className = 'node-bracket';
-      closeInline.textContent = isArray ? ']' : '}';
-      if (wrapper.dataset.collapsed !== 'true') closeInline.style.display = 'none';
-      content.appendChild(closeInline);
+      const close = document.createElement('span');
+      close.className = 'node-bracket';
+      close.textContent = Array.isArray(value) ? ']' : '}';
+      content.appendChild(close);
 
-      if (trailingComma) {
-        const comma = document.createElement('span');
-        comma.className = 'node-comma';
-        comma.textContent = ',';
-        if (wrapper.dataset.collapsed !== 'true') comma.style.display = 'none';
-        content.appendChild(comma);
-      }
-
-      line.appendChild(content);
-      wrapper.appendChild(line);
-
-      const children = document.createElement('div');
-      children.className = 'children';
-      wrapper.appendChild(children);
-
-      const closing = document.createElement('div');
-      closing.className = 'node-line closing-line';
-      createIndent(closing, level);
-
-      const spacer = document.createElement('span');
-      spacer.className = 'indent';
-      closing.appendChild(spacer);
-
-      const closeContent = document.createElement('span');
-      const closeBracket = document.createElement('span');
-      closeBracket.className = 'node-bracket';
-      closeBracket.textContent = isArray ? ']' : '}';
-      closeContent.appendChild(closeBracket);
-
-      if (trailingComma) {
-        const comma = document.createElement('span');
-        comma.className = 'node-comma';
-        comma.textContent = ',';
-        closeContent.appendChild(comma);
-      }
-
-      closing.appendChild(closeContent);
-      wrapper.appendChild(closing);
-      return wrapper;
+      appendTrailingComma(content, trailingComma);
     }
 
-    function ensureChildrenBuilt(node) {
-      if (!node || node.dataset.isContainer !== 'true' || node.dataset.built === 'true') return;
+    function createClosingLine(level, value, trailingComma) {
+      const line = document.createElement('div');
+      line.className = 'node-line';
+      line.dataset.level = String(level);
+      createIndent(line, level);
 
-      const path = node.dataset.path;
-      const level = Number(node.dataset.level);
-      const value = getValueByPath(path);
-      const childrenWrap = node.querySelector(':scope > .children');
-      if (!childrenWrap) return;
+      const spacer = document.createElement('span');
+      spacer.className = 'toggle placeholder';
+      spacer.setAttribute('aria-hidden', 'true');
+      line.appendChild(spacer);
 
-      const entries = Array.isArray(value) ? value.map((_, i) => [String(i), value[i]]) : Object.entries(value);
-      const total = entries.length;
-      const chunkSize = total > MASSIVE_NODE_THRESHOLD ? 200 : total > 300 ? 100 : 1000;
-      let index = 0;
+      const content = document.createElement('span');
+      content.className = 'node-content';
 
-      function appendChunk() {
-        const frag = document.createDocumentFragment();
-        const newNodes = [];
-        let count = 0;
+      const close = document.createElement('span');
+      close.className = 'node-bracket';
+      close.textContent = Array.isArray(value) ? ']' : '}';
+      content.appendChild(close);
+      appendTrailingComma(content, trailingComma);
 
-        while (index < total && count < chunkSize) {
-          const [k] = entries[index];
-          const childPath = Array.isArray(value) ? `${path}.${index}` : `${path}.${k}`;
-          const childKey = Array.isArray(value) ? null : k;
-          const childNode = createNodeShell(childPath, childKey, level + 1, index < total - 1);
-          newNodes.push(childNode);
-          frag.appendChild(childNode);
-          index++;
-          count++;
-        }
+      line.appendChild(content);
+      return line;
+    }
 
-        childrenWrap.appendChild(frag);
-        updateLineNumbers(els.treeLineNumbers, els.treeRoot.innerText || '1', 'tree');
-        syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
+    function appendValueLine(lines, path, keyName, level, value, trailingComma) {
+      const isContainer = value !== null && typeof value === 'object';
+      const collapsed = isContainer && state.collapsed.has(path);
 
-        for (const childNode of newNodes) {
-          if (childNode.dataset.isContainer === 'true') {
-            applyCollapsedState(childNode);
-            if (childNode.dataset.collapsed !== 'true') {
-              const childValue = getValueByPath(childNode.dataset.path);
-              const childTotal = Array.isArray(childValue) ? childValue.length : Object.keys(childValue || {}).length;
-              if (childTotal <= 200) ensureChildrenBuilt(childNode);
-            }
-          }
-        }
+      const { line, content } = createTreeLine(level, path, keyName, isContainer, collapsed);
 
-        if (index < total) {
-          requestAnimationFrame(appendChunk);
-        } else {
-          node.dataset.built = 'true';
-        }
+      if (!isContainer) {
+        content.appendChild(createPrimitiveValueNode(value));
+        appendTrailingComma(content, trailingComma);
+        lines.push(line);
+        return;
       }
 
-      appendChunk();
+      if (Array.isArray(value) && value.length === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'node-bracket';
+        empty.textContent = '[]';
+        content.appendChild(empty);
+        appendTrailingComma(content, trailingComma);
+        lines.push(line);
+        return;
+      }
+
+      if (Array.isArray(value) && isInlineTreeArray(value)) {
+        appendInlineArray(content, value);
+        appendTrailingComma(content, trailingComma);
+        lines.push(line);
+        return;
+      }
+
+      appendContainerOpen(content, value, collapsed, trailingComma);
+      lines.push(line);
+      if (collapsed) return;
+
+      const entries = Array.isArray(value) ? value.map((item, index) => [index, item]) : Object.entries(value);
+      entries.forEach(([childKey, childValue], index) => {
+        const childPath = `${path}.${childKey}`;
+        const shownKey = Array.isArray(value) ? null : childKey;
+        appendValueLine(lines, childPath, shownKey, level + 1, childValue, index < entries.length - 1);
+      });
+
+      lines.push(createClosingLine(level, value, trailingComma));
     }
 
     function toggleNode(path) {
-      const node = els.treeRoot.querySelector(`.tree-node[data-path="${CSS.escape(path)}"]`);
-      if (!node || node.dataset.isContainer !== 'true') return;
-
-      const collapsed = node.dataset.collapsed === 'true';
-      node.dataset.collapsed = collapsed ? 'false' : 'true';
-
-      if (collapsed) {
-        state.collapsed.delete(path);
-        ensureChildrenBuilt(node);
-      } else {
-        state.collapsed.add(path);
-      }
-
-      applyCollapsedState(node);
-      updateLineNumbers(els.treeLineNumbers, els.treeRoot.innerText || '1', 'tree');
-      syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
+      const value = getValueByPath(path);
+      if (!value || typeof value !== 'object') return;
+      if (state.collapsed.has(path)) state.collapsed.delete(path);
+      else state.collapsed.add(path);
+      renderTreeRoot();
       scheduleSave();
     }
 
     function renderTreeRoot() {
-      updateLineNumbers(els.treeLineNumbers, '', 'tree');
+      updateLineNumbersByCount(els.treeLineNumbers, 1, 'tree');
       if (!state.settings.showTreePanel) {
         els.treeRoot.innerHTML = '<div class="placeholder-text">Tree hidden</div>';
         updateButtons(state.parsed !== null);
         updateMeta();
-        updateLineNumbers(els.editorLineNumbers, els.editor.value);
-        syncLineNumberScroll(els.editorLineNumbers, els.editor);
         return;
       }
       els.treeRoot.innerHTML = '';
@@ -1110,17 +1064,18 @@
         els.treeRoot.innerHTML = '<div class="placeholder-text">Пусто</div>';
         updateButtons(false);
         updateMeta();
-        updateLineNumbers(els.treeLineNumbers, '1', 'tree');
+        updateLineNumbersByCount(els.treeLineNumbers, 1, 'tree');
         return;
       }
 
-      const root = createNodeShell('root', null, 0, false);
-      els.treeRoot.appendChild(root);
-      applyCollapsedState(root);
-      if (root.dataset.collapsed !== 'true') ensureChildrenBuilt(root);
+      const lines = [];
+      appendValueLine(lines, 'root', null, 0, state.parsed, false);
+      const fragment = document.createDocumentFragment();
+      for (const line of lines) fragment.appendChild(line);
+      els.treeRoot.appendChild(fragment);
       updateButtons(true);
       updateMeta();
-      updateLineNumbers(els.treeLineNumbers, els.treeRoot.innerText || '1', 'tree');
+      updateLineNumbersByCount(els.treeLineNumbers, lines.length, 'tree');
       syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
     }
 
@@ -1135,6 +1090,8 @@
       if (!state.parsed || typeof state.parsed !== 'object') return;
       state.collapsed.clear();
       renderTreeRoot();
+      scheduleSave();
+      return;
 
       if (els.editor.value.length > LARGE_TEXT_THRESHOLD) {
         setStatus('JSON отформатирован. Полное раскрытие ограничено для больших данных.', 'ok');
@@ -1479,6 +1436,11 @@
 
     els.editor.addEventListener('scroll', syncEditorScrollToTree, { passive: true });
     els.treeWrap.addEventListener('scroll', syncTreeScrollToEditor, { passive: true });
+    els.treeRoot.addEventListener('click', e => {
+      const toggle = e.target.closest('.toggle[data-path]');
+      if (!toggle || toggle.disabled) return;
+      toggleNode(toggle.dataset.path);
+    });
 
     els.editor.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {

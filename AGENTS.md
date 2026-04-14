@@ -95,6 +95,8 @@ The following tools are planned candidates and are **not implemented yet**. Thes
     - browser console style logs
     - multiline stack traces
   - Presents logs as structured rows rather than a single raw text block.
+  - Log view should use virtualization so that it could easily display large log files (50-100MB) and do not lag on scroll
+  - During opening and pre-processing of large files app should show progress bar and do not hang
   - Supports filtering by log level such as `TRACE`, `DEBUG`, `INFO`, `WARN`, and `ERROR`.
   - Supports free-text and regex search across the visible log content.
   - Supports quick extraction and filtering by common operational fields when present:
@@ -103,6 +105,7 @@ The following tools are planned candidates and are **not implemented yet**. Thes
     - logger/class name
     - request ID / trace ID / correlation ID
   - Groups multiline stack traces and continuation lines under the originating log entry.
+  - Supports specifying log format so that app could colorize different parts of log with different colors (i.e. timestamp, correlationId, thread, message)
   - Supports collapsing and expanding stack traces and other multiline entries.
   - Highlights log levels with distinct colors while preserving a light theme.
   - Supports timestamp-aware sorting and time-range filtering when timestamps can be parsed.
