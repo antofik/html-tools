@@ -28,7 +28,9 @@
       --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; color: var(--text); font-family: var(--sans); background: #ffffff; }
+    html, body { scrollbar-width: none; }
+    body { margin: 0; color: var(--text); font-family: var(--sans); background: #ffffff; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { width: 0; height: 0; }
     .container { width: 100%; max-width: none; margin: 0; padding: 24px; }
     .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
     h1 { margin: 0; font-size: 30px; line-height: 1.1; color: #1f2937; }
@@ -75,6 +77,14 @@
     .btn-icon svg { width: 16px; height: 16px; display: block; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
     .view-block { display: none; }
     .view-block.active { display: block; }
+    .result-shell { position: relative; }
+    .result-scroll { border: 1px solid var(--border); border-radius: 14px; background: #ffffff; }
+    .overview-rail { position: fixed; top: 0; right: 0; bottom: 0; width: 24px; border-left: 1px solid rgba(148, 163, 184, 0.18); background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 0; overflow: hidden; cursor: pointer; z-index: 20; }
+    .overview-markers { position: absolute; inset: 0; }
+    .overview-marker { position: absolute; left: 0; right: 0; min-height: 3px; opacity: .95; border-radius: 2px; }
+    .overview-marker.added { background: #22c55e; }
+    .overview-marker.changed { background: #f59e0b; }
+    .overview-viewport { position: absolute; left: 0; right: 0; border-radius: 0; border-top: 1px solid rgba(15, 23, 42, 0.14); border-bottom: 1px solid rgba(15, 23, 42, 0.14); background: rgba(100, 116, 139, 0.28); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); pointer-events: none; }
     .side-by-side { border-top: 1px solid var(--border); font-family: var(--mono); font-size: 13px; line-height: 1.5; }
     .side-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .col-head { position: sticky; top: 0; z-index: 1; background: #ffffff; border-bottom: 1px solid var(--border); padding: 10px 12px; font-size: 12px; color: var(--muted); letter-spacing: .02em; }
@@ -105,6 +115,7 @@
       .app-header { flex-direction: column; align-items: flex-start; }
       .toolbar, .inputs { grid-template-columns: 1fr; }
       .toolbar { width: 100%; justify-content: flex-start; }
+      .overview-rail { width: 24px; }
       .side-head, .diff-row { grid-template-columns: 1fr; }
       .col-head + .col-head, .half + .half { border-left: none; border-top: 1px solid var(--border); }
     }
@@ -634,18 +645,19 @@
       const sideRows = data.rows.map(row => {
         const leftClass = row.kind === 'added' ? 'placeholder' : (row.kind === 'deleted' ? 'del' : (row.kind === 'changed' ? 'changed' : 'same'));
         const rightClass = row.kind === 'deleted' ? 'placeholder' : (row.kind === 'added' ? 'add' : (row.kind === 'changed' ? 'changed' : 'same'));
-        return `<div class="diff-row"><div class="half ${leftClass}"><div class="ln">${row.leftNo || ''}</div><div class="code">${row.leftHtml || ''}</div></div><div class="half ${rightClass}"><div class="ln">${row.rightNo || ''}</div><div class="code">${row.rightHtml || ''}</div></div></div>`;
+        return `<div class="diff-row" data-kind="${escapeHtml(row.kind)}"><div class="half ${leftClass}"><div class="ln">${row.leftNo || ''}</div><div class="code">${row.leftHtml || ''}</div></div><div class="half ${rightClass}"><div class="ln">${row.rightNo || ''}</div><div class="code">${row.rightHtml || ''}</div></div></div>`;
       }).join('');
       const unifiedRows = data.unified.map(item => {
         let cls = '';
         if (item.sign === '+') cls = item.kind === 'changed' ? 'u-change' : 'u-add';
         else if (item.sign === '-') cls = item.kind === 'changed' ? 'u-change' : 'u-del';
         else if (item.sign === 'meta') cls = 'u-meta';
-        return `<div class="u-line ${cls}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
+        return `<div class="u-line ${cls}" data-kind="${escapeHtml(item.kind || 'same')}"><div class="u-sign">${escapeHtml(item.sign)}</div><div class="u-code">${item.html ?? escapeHtml(item.text)}</div></div>`;
       }).join('');
-      els.resultBody.innerHTML = `<div id="sideView" class="view-block ${state.viewMode === 'side' ? 'active' : ''}"><div class="side-by-side"><div class="side-head"><div class="col-head">${leftHead}</div><div class="col-head">${rightHead}</div></div>${sideRows}</div></div><div id="unifiedView" class="view-block ${state.viewMode === 'unified' ? 'active' : ''}"><div class="unified-box"><div class="col-head">Unified diff</div>${unifiedRows}</div></div>`;
+      els.resultBody.innerHTML = `<div class="result-shell"><div class="result-scroll"><div id="sideView" class="view-block ${state.viewMode === 'side' ? 'active' : ''}"><div class="side-by-side"><div class="side-head"><div class="col-head">${leftHead}</div><div class="col-head">${rightHead}</div></div>${sideRows}</div></div><div id="unifiedView" class="view-block ${state.viewMode === 'unified' ? 'active' : ''}"><div class="unified-box"><div class="col-head">Unified diff</div>${unifiedRows}</div></div></div><div id="overviewRail" class="overview-rail" aria-label="Diff overview"><div id="overviewMarkers" class="overview-markers"></div><div id="overviewViewport" class="overview-viewport"></div></div></div>`;
       els.stats.innerHTML = `<span class="badge">unchanged: ${data.stats.same}</span><span class="badge">added: ${data.stats.added}</span><span class="badge">removed: ${data.stats.removed}</span><span class="badge">changed: ${data.stats.changed}</span>`;
       updateViewButtons();
+      setupOverview();
     }
     function renderError(message) {
       state.diffData = null;
@@ -703,11 +715,93 @@
       if (sideView) sideView.classList.toggle('active', mode === 'side');
       if (unifiedView) unifiedView.classList.toggle('active', mode === 'unified');
       updateViewButtons();
+      refreshOverview();
       scheduleSave();
     }
     function updateViewButtons() {
       els.viewSideBtn.classList.toggle('active', state.viewMode === 'side');
       els.viewUnifiedBtn.classList.toggle('active', state.viewMode === 'unified');
+    }
+    function getOverviewRefs() {
+      return {
+        railEl: document.getElementById('overviewRail'),
+        markersEl: document.getElementById('overviewMarkers'),
+        viewportEl: document.getElementById('overviewViewport')
+      };
+    }
+    function getActiveOverviewRows() {
+      const activeView = document.querySelector('.view-block.active');
+      if (!activeView) return [];
+      if (activeView.id === 'unifiedView') return Array.from(activeView.querySelectorAll('.u-line[data-kind]'));
+      return Array.from(activeView.querySelectorAll('.diff-row[data-kind]'));
+    }
+    function updateOverviewViewport() {
+      const { railEl, viewportEl } = getOverviewRefs();
+      if (!railEl || !viewportEl) return;
+      const docEl = document.documentElement;
+      const maxScroll = Math.max(0, docEl.scrollHeight - window.innerHeight);
+      const railHeight = railEl.clientHeight;
+      const thumbHeight = Math.max(18, railHeight * (window.innerHeight / Math.max(docEl.scrollHeight, 1)));
+      const top = maxScroll > 0 ? ((railHeight - thumbHeight) * window.scrollY / maxScroll) : 0;
+      viewportEl.style.height = `${thumbHeight}px`;
+      viewportEl.style.transform = `translateY(${top}px)`;
+    }
+    function refreshOverview() {
+      const { markersEl } = getOverviewRefs();
+      if (!markersEl) return;
+      const rows = getActiveOverviewRows();
+      const activeView = document.querySelector('.view-block.active');
+      if (!activeView || !rows.length) {
+        markersEl.innerHTML = '';
+        updateOverviewViewport();
+        return;
+      }
+      const docEl = document.documentElement;
+      const contentHeight = Math.max(docEl.scrollHeight, 1);
+      const markers = [];
+      for (const row of rows) {
+        const kind = row.dataset.kind;
+        if (kind !== 'added' && kind !== 'deleted' && kind !== 'changed') continue;
+        const rowTop = row.getBoundingClientRect().top + window.scrollY;
+        const topPct = (rowTop / contentHeight) * 100;
+        const heightPct = Math.max((row.offsetHeight / contentHeight) * 100, 0.35);
+        const clampedTopPct = Math.min(Math.max(topPct, 0), 99.65);
+        const clampedHeightPct = Math.min(heightPct, 100 - clampedTopPct);
+        const cls = kind === 'changed' ? 'changed' : 'added';
+        markers.push(`<div class="overview-marker ${cls}" style="top:${clampedTopPct}%;height:${clampedHeightPct}%"></div>`);
+      }
+      markersEl.innerHTML = markers.join('');
+      updateOverviewViewport();
+    }
+    function setupOverview() {
+      const { railEl } = getOverviewRefs();
+      if (!railEl) return;
+      if (!railEl.dataset.overviewBound) {
+        const scrollFromClientY = clientY => {
+          const currentRail = document.getElementById('overviewRail');
+          if (!currentRail) return;
+          const docEl = document.documentElement;
+          const rect = currentRail.getBoundingClientRect();
+          const ratio = Math.min(Math.max((clientY - rect.top) / Math.max(rect.height, 1), 0), 1);
+          window.scrollTo({ top: ratio * Math.max(docEl.scrollHeight - window.innerHeight, 0), behavior: 'auto' });
+        };
+        railEl.addEventListener('click', event => {
+          scrollFromClientY(event.clientY);
+        });
+        railEl.addEventListener('pointerdown', event => {
+          event.preventDefault();
+          scrollFromClientY(event.clientY);
+          const move = moveEvent => scrollFromClientY(moveEvent.clientY);
+          const stop = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', stop);
+          };
+          window.addEventListener('pointermove', move);
+          window.addEventListener('pointerup', stop);
+        });
+        railEl.dataset.overviewBound = 'true';
+      }
+      requestAnimationFrame(refreshOverview);
     }
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
@@ -756,6 +850,8 @@
     updateIgnoreEnabledButton();
     updateViewButtons();
     if (els.leftText.value || els.rightText.value) computeDiff();
+    window.addEventListener('scroll', updateOverviewViewport, { passive: true });
+    window.addEventListener('resize', refreshOverview);
     window.addEventListener('beforeunload', saveStateNow);
   </script>
 </body>
