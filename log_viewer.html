@@ -84,7 +84,6 @@
     .search-toolbar-left { display: grid; gap: 8px; min-width: 0; }
     .scope-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
     .scope-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
-    .scope-controls select { width: auto; min-width: 180px; }
     .search-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
     .search-card { display: grid; gap: 6px; padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none; min-width: 0; }
     .search-card.soft { background: transparent; }
@@ -152,7 +151,7 @@
     .stacktrace-line .stacktrace-cause { font-weight: 700; color: #b45309; }
     .stacktrace-line .stacktrace-exception { font-weight: 700; color: #b91c1c; }
     .empty { padding: 32px 18px; color: var(--muted); font-size: 14px; }
-    @media (max-width: 1080px) { .app-header { flex-direction: column; align-items: flex-start; } .compact-meta { max-width: 100%; } .scope-row { grid-template-columns: 1fr; } .search-row { grid-template-columns: 1fr; } .control-row.dual { grid-template-columns: 1fr; } .scope-controls { align-items: stretch; } .scope-controls select { width: 100%; } }
+    @media (max-width: 1080px) { .app-header { flex-direction: column; align-items: flex-start; } .compact-meta { max-width: 100%; } .scope-row { grid-template-columns: 1fr; } .search-row { grid-template-columns: 1fr; } .control-row.dual { grid-template-columns: 1fr; } .scope-controls { align-items: stretch; } }
   </style>
 </head>
 <body>
@@ -182,7 +181,7 @@
         <div class="top-strip">
           <div class="top-strip-left">
             <button id="searchToggleBtn" class="compact-btn" type="button" aria-expanded="false" aria-controls="searchDrawer">Filter</button>
-            <div id="compactMeta" class="compact-meta">Format: auto</div>
+            <div id="compactMeta" class="compact-meta"></div>
           </div>
           <div class="top-strip-right">
             <div id="warnCount" class="count-badge warn">Warn: 0</div>
@@ -198,13 +197,6 @@
                   <div class="scope-row">
                     <div id="levelGroup" class="level-group"></div>
                     <div class="scope-controls">
-                      <select id="formatMode">
-                        <option value="auto">Auto detect</option>
-                        <option value="spring">Spring / Java</option>
-                        <option value="generic">Generic timestamp log</option>
-                        <option value="browser">Browser console</option>
-                        <option value="raw">Raw lines</option>
-                      </select>
                       <button id="regexBtn" class="toggle-btn" type="button">Regex</button>
                       <button id="virtualizationBtn" class="toggle-btn active" type="button">Virtualization</button>
                       <button id="clearSearchBtn" class="compact-btn secondary" type="button">Clear search</button>
@@ -276,6 +268,7 @@
       const ID_RE = /\\b(?:trace[_-]?id|request[_-]?id|req[_-]?id|correlation[_-]?id|span[_-]?id)\\b\\s*[:=]\\s*([A-Za-z0-9._:-]+)/i;
       const SPRING_RE = /^(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\s+(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s+(?:[A-Za-z0-9._:-]+\\s+)?(?:\\d+\\s+---\\s+)?\\[([^\\]]+)\\]\\s+([^:]+?)\\s*:\\s*(.*)$/;
       const SAMPLE_APP_RE = /^(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\s+(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s+([A-Za-z0-9._:-]+)\\s+\\[([^\\]]+)\\]\\s+([A-Za-z0-9.$_-]+)\\s{2,}(.*)$/;
+      const MINECRAFT_RE = /^\\[(\\d{2}:\\d{2}:\\d{2})\\]\\s+\\[([^/\\]]+)\\/(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\]:\\s*(.*)$/;
       const GENERIC_TS_RE = /^(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\s+(.*)$/;
       const BROWSER_RE = /^\\[?(\\d{4}-\\d{2}-\\d{2}(?:[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?)?(?:Z|[+-]\\d{2}:?\\d{2})?)\\]?\\s*(TRACE|DEBUG|INFO|WARN|ERROR|FATAL|LOG)?\\s*[:\\-]?\\s*(.*)$/i;
       const LEVEL_PREFIX_RE = /^(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s*[:\\-]?\\s*(.*)$/;
@@ -329,6 +322,22 @@
         }
 
         if (mode === 'browser' || mode === 'auto') {
+          const minecraftMatch = trimmed.match(MINECRAFT_RE);
+          if (minecraftMatch) {
+            const entry = {
+              timestamp: minecraftMatch[1],
+              timestampMs: null,
+              level: minecraftMatch[3],
+              thread: minecraftMatch[2],
+              logger: '',
+              message: minecraftMatch[4] || '',
+              traceId: '',
+              format: 'browser'
+            };
+            extractSupplemental(trimmed, entry);
+            return entry;
+          }
+
           const match = trimmed.match(BROWSER_RE);
           if (match && (match[1] || match[2])) {
             const ts = normalizeTimestamp(match[1]);
@@ -379,7 +388,8 @@
           || /^Suppressed:/.test(line)
           || /^Nested exception is:/.test(line)
           || /^\\.\\.\\. \\d+ common frames omitted$/.test(line)
-          || /^[A-Za-z_$][A-Za-z0-9_$.]*(?::|Exception:|Error:|Throwable:|Failure:)/.test(line);
+          || /^[A-Za-z_$][A-Za-z0-9_$.]*(?::|Exception:|Error:|Throwable:|Failure:)/.test(line)
+          || /^[A-Za-z0-9_$][A-Za-z0-9_$.]*,\\s*$/.test(line);
       }
 
       self.onmessage = event => {
@@ -396,7 +406,7 @@
           const line = lines[i];
           const parsed = parseLineStart(line, mode);
           const shouldStart = !!parsed;
-          const continuation = current && !shouldStart && (isContinuationLine(line) || line === '' || current.continuation.length > 0);
+          const continuation = current && !shouldStart && (isContinuationLine(line) || line === '');
 
           if (shouldStart) {
             if (current) entries.push(current);
@@ -434,7 +444,6 @@
       rawText: '',
       fileName: '',
       fileSize: 0,
-      formatMode: 'auto',
       includePatternsText: '',
       excludePatternsText: '',
       regexSearch: false,
@@ -475,7 +484,6 @@
       copyBtn: document.getElementById('copyBtn'),
       downloadBtn: document.getElementById('downloadBtn'),
       clearBtn: document.getElementById('clearBtn'),
-      formatMode: document.getElementById('formatMode'),
       includePatterns: document.getElementById('includePatterns'),
       excludePatterns: document.getElementById('excludePatterns'),
       regexBtn: document.getElementById('regexBtn'),
@@ -564,9 +572,6 @@
 
     function saveStateNow() {
       const payload = {
-        fileName: state.fileName,
-        fileSize: state.fileSize,
-        formatMode: state.formatMode,
         includePatternsText: state.includePatternsText,
         excludePatternsText: state.excludePatternsText,
         regexSearch: state.regexSearch,
@@ -574,9 +579,6 @@
         searchCollapsed: state.searchCollapsed,
         levelEnabled: state.levelEnabled
       };
-      if (state.persistedRawText && state.rawText) {
-        payload.rawText = state.rawText;
-      }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch {}
@@ -587,13 +589,6 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw);
-        if (typeof saved.rawText === 'string') {
-          state.rawText = saved.rawText;
-          state.persistedRawText = true;
-        }
-        if (typeof saved.fileName === 'string') state.fileName = saved.fileName;
-        if (typeof saved.fileSize === 'number') state.fileSize = saved.fileSize;
-        if (typeof saved.formatMode === 'string') state.formatMode = saved.formatMode;
         if (typeof saved.includePatternsText === 'string') {
           state.includePatternsText = saved.includePatternsText;
         } else if (typeof saved.searchText === 'string') {
@@ -1086,7 +1081,7 @@
         LEVELS.some(level => !state.levelEnabled[level]) ? 'levels' : '',
         !state.virtualizationEnabled ? 'full-render' : ''
       ].filter(Boolean);
-      els.compactMeta.textContent = `Format: ${state.formatMode}${activeFilters.length ? ' • ' + activeFilters.join(', ') : ''}`;
+      els.compactMeta.textContent = activeFilters.length ? activeFilters.join(' • ') : '';
       syncHeaderSpacer();
     }
 
@@ -1122,7 +1117,7 @@
 
       beginParsing(reason);
       try {
-        const result = await parseLogs(text, state.formatMode);
+        const result = await parseLogs(text, 'auto');
         state.entries = result.entries || [];
         state.counts = result.counts || null;
         setStatus('', '');
@@ -1238,7 +1233,6 @@
     }
 
     function syncControlsFromState() {
-      els.formatMode.value = state.formatMode;
       els.includePatterns.value = state.includePatternsText;
       els.excludePatterns.value = state.excludePatternsText;
       updateButtons();
@@ -1293,10 +1287,6 @@
       scheduleSave();
     });
 
-    els.formatMode.addEventListener('change', () => {
-      state.formatMode = els.formatMode.value;
-      void parseCurrentText('Re-parsing log...');
-    });
     els.includePatterns.addEventListener('input', () => {
       state.includePatternsText = els.includePatterns.value;
       scheduleFilterApply();
@@ -1357,11 +1347,7 @@
     updateStats();
     void renderLogText();
     syncHeaderSpacer();
-    if (state.rawText.trim()) {
-      void parseCurrentText('Restoring log from localStorage...');
-    } else {
-      updateButtons();
-    }
+    updateButtons();
   </script>
 </body>
 </html>
