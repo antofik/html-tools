@@ -552,8 +552,8 @@
       worker: null,
       workerUrl: null,
       syncScroll: {
-        editor: false,
-        tree: false
+        target: '',
+        until: 0
       },
       saveTimer: null
     };
@@ -1360,23 +1360,31 @@
     }
 
     function syncEditorScrollToTree() {
-      if (state.syncScroll.tree) return;
-      state.syncScroll.editor = true;
+      const now = performance.now();
+      if (state.syncScroll.target === 'editor' && now < state.syncScroll.until) return;
       const ratio = els.editor.scrollTop / Math.max(els.editor.scrollHeight - els.editor.clientHeight, 1);
-      els.treeWrap.scrollTop = ratio * Math.max(els.treeWrap.scrollHeight - els.treeWrap.clientHeight, 0);
+      const targetScrollTop = ratio * Math.max(els.treeWrap.scrollHeight - els.treeWrap.clientHeight, 0);
+      if (Math.abs(els.treeWrap.scrollTop - targetScrollTop) > 1) {
+        state.syncScroll.target = 'tree';
+        state.syncScroll.until = now + 140;
+        els.treeWrap.scrollTop = targetScrollTop;
+      }
       syncLineNumberScroll(els.editorLineNumbers, els.editor);
       syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
-      state.syncScroll.editor = false;
     }
 
     function syncTreeScrollToEditor() {
-      if (state.syncScroll.editor) return;
-      state.syncScroll.tree = true;
+      const now = performance.now();
+      if (state.syncScroll.target === 'tree' && now < state.syncScroll.until) return;
       const ratio = els.treeWrap.scrollTop / Math.max(els.treeWrap.scrollHeight - els.treeWrap.clientHeight, 1);
-      els.editor.scrollTop = ratio * Math.max(els.editor.scrollHeight - els.editor.clientHeight, 0);
+      const targetScrollTop = ratio * Math.max(els.editor.scrollHeight - els.editor.clientHeight, 0);
+      if (Math.abs(els.editor.scrollTop - targetScrollTop) > 1) {
+        state.syncScroll.target = 'editor';
+        state.syncScroll.until = now + 140;
+        els.editor.scrollTop = targetScrollTop;
+      }
       syncLineNumberScroll(els.treeLineNumbers, els.treeWrap);
       syncLineNumberScroll(els.editorLineNumbers, els.editor);
-      state.syncScroll.tree = false;
     }
 
     function clearAll() {

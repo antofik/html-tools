@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Log Viewer</title>
-  <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23ffffff"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="%23e5e7eb" stroke-width="2"/><path d="M17 18v28" stroke="%230f172a" stroke-width="4" stroke-linecap="round"/><path d="M31 24h16" stroke="%232563eb" stroke-width="4" stroke-linecap="round"/><path d="M31 34h10" stroke="%23f59e0b" stroke-width="4" stroke-linecap="round"/><path d="M31 44h18" stroke="%23047857" stroke-width="4" stroke-linecap="round"/></svg>' />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 510.347 510.347'%3E%3Cg transform='translate(1 1)'%3E%3Cpath fill='%23FFDD09' d='M408.653 92.04c0 42.667-57.173 76.8-128 76.8s-128-34.133-128-76.8 57.173-76.8 128-76.8 128 34.133 128 76.8'/%3E%3Cpath fill='%23FD9808' d='M280.653 15.24h-12.8c64.853 4.267 115.2 36.693 115.2 76.8s-50.347 72.533-115.2 76.8h12.8c70.827 0 128-34.133 128-76.8s-57.173-76.8-128-76.8'/%3E%3Cpath fill='%23FFDD09' d='M280.653 168.84c-70.827 0-128-34.133-128-76.8v349.867c0 18.773 40.96 51.2 128 51.2 89.6 0 128-32.427 128-51.2V92.04c0 42.667-57.173 76.8-128 76.8'/%3E%3Cpath fill='%23FD9808' d='M383.053 138.12v312.32c0 10.24-11.093 24.747-35.84 34.987 42.667-10.24 61.44-30.72 61.44-43.52V92.04c0 17.067-9.387 33.28-25.6 46.08'/%3E%3Cpath fill='%23FFF' d='M280.653 15.24h12.8c-64.853 4.267-115.2 36.693-115.2 76.8s50.347 72.533 115.2 76.8h-12.8c-70.827 0-128-34.133-128-76.8s57.173-76.8 128-76.8'/%3E%3Cpath fill='%23FFF' d='M178.253 138.12v312.32c0 10.24 11.093 24.747 35.84 34.987-42.667-10.24-61.44-30.72-61.44-43.52V92.04c0 17.067 9.387 33.28 25.6 46.08'/%3E%3Cpath fill='%23FFDD09' d='M408.653 202.973V299.4l40.107 40.107c3.413 3.413 9.387 3.413 12.8 0l35.84-35.84c3.413-3.413 3.413-9.387 0-12.8L408.653 202.973z'/%3E%3Cpath fill='%23FD9808' d='M451.32 336.947c3.413 3.413 9.387 3.413 12.8 0l35.84-35.84c3.413-3.413 3.413-9.387 0-12.8L485.453 273.8c0 2.56-.853 5.12-2.56 6.827l-35.84 35.84c-3.413 3.413-9.387 3.413-12.8 0L451.32 336.947z'/%3E%3Cpath fill='%231CD759' d='M101.453 262.707c2.56-54.613-39.253-96.427-93.867-93.867 2.56 54.613 44.373 96.427 98.987 93.867'/%3E%3C/g%3E%3C/svg%3E">
   <style>
     :root {
       --bg: #ffffff;
@@ -78,10 +78,32 @@
     .count-badge { border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #fff; }
     .count-badge.warn { color: var(--warn); background: #fffbeb; border-color: #fde68a; }
     .count-badge.error { color: var(--error); background: #fef2f2; border-color: #fecaca; }
-    .top-drawer { border-bottom: 1px solid var(--border); background: #fff; }
+    .top-drawer { border-bottom: 1px solid var(--border); background: linear-gradient(180deg, #fcfdfd 0%, #f8fafc 100%); }
     .top-drawer[hidden] { display: none; }
-    .search-row { display: grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: start; }
-    .search-patterns { min-height: 68px; resize: vertical; }
+    .search-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+    .search-toolbar-left { display: grid; gap: 8px; min-width: 0; }
+    .scope-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+    .scope-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+    .scope-controls select { width: auto; min-width: 180px; }
+    .search-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    .search-card { display: grid; gap: 6px; padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none; min-width: 0; }
+    .search-card.soft { background: transparent; }
+    .search-card-title { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #475569; }
+    .search-patterns { min-height: 88px; resize: vertical; font-family: var(--mono); line-height: 1.45; }
+    .search-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .search-chip { border: 1px solid #dbe3ee; background: #fff; color: #64748b; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .search-chip strong { color: #0f172a; font-weight: 800; }
+    .search-chip.regex { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+    .compact-btn.secondary { background: #fff; border-color: #d7dee8; color: #475569; }
+    .compact-btn.secondary:hover { background: #f8fafc; }
+    .scope-controls .toggle-btn { min-height: 34px; }
+    .help-inline { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .help-wrap { position: relative; display: inline-flex; align-items: center; }
+    .help-btn { width: 22px; height: 22px; min-width: 22px; padding: 0; border-radius: 999px; font-size: 12px; font-weight: 800; color: #64748b; background: #fff; border: 1px solid #dbe3ee; cursor: help; }
+    .help-btn:hover { background: #f8fafc; }
+    .help-tooltip { position: absolute; top: calc(100% + 8px); right: 0; width: min(320px, 70vw); padding: 10px 12px; border: 1px solid #dbe3ee; border-radius: 12px; background: #fff; color: #475569; font-size: 12px; line-height: 1.45; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .15s ease, transform .15s ease, visibility .15s ease; z-index: 6; }
+    .help-wrap:hover .help-tooltip,
+    .help-wrap:focus-within .help-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
     .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; align-items: center; }
     .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; white-space: nowrap; }
     :root { --log-row-height: 20px; }
@@ -130,7 +152,7 @@
     .stacktrace-line .stacktrace-cause { font-weight: 700; color: #b45309; }
     .stacktrace-line .stacktrace-exception { font-weight: 700; color: #b91c1c; }
     .empty { padding: 32px 18px; color: var(--muted); font-size: 14px; }
-    @media (max-width: 1080px) { .app-header { flex-direction: column; align-items: flex-start; } .compact-meta { max-width: 100%; } .search-row { grid-template-columns: 1fr; } .control-row.dual { grid-template-columns: 1fr; } }
+    @media (max-width: 1080px) { .app-header { flex-direction: column; align-items: flex-start; } .compact-meta { max-width: 100%; } .scope-row { grid-template-columns: 1fr; } .search-row { grid-template-columns: 1fr; } .control-row.dual { grid-template-columns: 1fr; } .scope-controls { align-items: stretch; } .scope-controls select { width: 100%; } }
   </style>
 </head>
 <body>
@@ -165,27 +187,50 @@
           <div class="top-strip-right">
             <div id="warnCount" class="count-badge warn">Warn: 0</div>
             <div id="errorCount" class="count-badge error">Error: 0</div>
-            <button id="regexBtn" class="toggle-btn" type="button">Regex</button>
           </div>
         </div>
         <div id="searchDrawer" class="top-drawer" hidden>
           <div class="control-grid">
-            <div class="control-row">
-              <div class="control-label">Levels</div>
-              <div id="levelGroup" class="level-group"></div>
-              <select id="formatMode">
-                <option value="auto">Auto detect</option>
-                <option value="spring">Spring / Java</option>
-                <option value="generic">Generic timestamp log</option>
-                <option value="browser">Browser console</option>
-                <option value="raw">Raw lines</option>
-              </select>
+            <div class="search-toolbar">
+              <div class="search-toolbar-left">
+                <div class="search-card soft">
+                  <div class="search-card-title">Search Scope</div>
+                  <div class="scope-row">
+                    <div id="levelGroup" class="level-group"></div>
+                    <div class="scope-controls">
+                      <select id="formatMode">
+                        <option value="auto">Auto detect</option>
+                        <option value="spring">Spring / Java</option>
+                        <option value="generic">Generic timestamp log</option>
+                        <option value="browser">Browser console</option>
+                        <option value="raw">Raw lines</option>
+                      </select>
+                      <button id="regexBtn" class="toggle-btn" type="button">Regex</button>
+                      <button id="virtualizationBtn" class="toggle-btn active" type="button">Virtualization</button>
+                      <button id="clearSearchBtn" class="compact-btn secondary" type="button">Clear search</button>
+                    </div>
+                  </div>
+                  <div class="help-inline">
+                    <span class="search-chip"><strong>Include</strong> any matching line</span>
+                    <span class="search-chip"><strong>Exclude</strong> any matching line</span>
+                    <span class="search-chip regex">Regex optional</span>
+                    <span class="help-wrap">
+                      <button class="help-btn" type="button" aria-label="Filter help">?</button>
+                      <span class="help-tooltip">Each line in Include or Exclude is treated as a separate pattern. Include keeps entries matching any line. Exclude removes entries matching any line. Regex mode applies to those lines.</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="search-row">
-              <textarea id="includePatterns" class="field search-patterns" placeholder="Include patterns&#10;one pattern per line"></textarea>
-              <textarea id="excludePatterns" class="field search-patterns" placeholder="Exclude patterns&#10;one pattern per line"></textarea>
-              <button id="clearSearchBtn" class="compact-btn" type="button">Clear search</button>
-              <button id="runParseBtn" class="compact-btn" type="button">Re-parse</button>
+              <div class="search-card">
+                <div class="search-card-title">Include Patterns</div>
+                <textarea id="includePatterns" class="field search-patterns" placeholder="INFO&#10;Application has been started&#10;thread-7"></textarea>
+              </div>
+              <div class="search-card">
+                <div class="search-card-title">Exclude Patterns</div>
+                <textarea id="excludePatterns" class="field search-patterns" placeholder="DEBUG&#10;heartbeat&#10;Scheduled cleanup"></textarea>
+              </div>
             </div>
           </div>
         </div>
@@ -402,6 +447,7 @@
       includePatternsText: '',
       excludePatternsText: '',
       regexSearch: false,
+      virtualizationEnabled: true,
       searchCollapsed: true,
       levelEnabled: Object.fromEntries(LEVELS.map(level => [level, true])),
       entries: [],
@@ -442,13 +488,13 @@
       includePatterns: document.getElementById('includePatterns'),
       excludePatterns: document.getElementById('excludePatterns'),
       regexBtn: document.getElementById('regexBtn'),
+      virtualizationBtn: document.getElementById('virtualizationBtn'),
       levelGroup: document.getElementById('levelGroup'),
       resultViewer: document.getElementById('resultViewer'),
       progressBar: document.getElementById('progressBar'),
       compactMeta: document.getElementById('compactMeta'),
       searchToggleBtn: document.getElementById('searchToggleBtn'),
       clearSearchBtn: document.getElementById('clearSearchBtn'),
-      runParseBtn: document.getElementById('runParseBtn'),
       searchDrawer: document.getElementById('searchDrawer'),
       logScroll: document.getElementById('logScroll'),
       logTextView: document.getElementById('logTextView'),
@@ -529,6 +575,7 @@
         includePatternsText: state.includePatternsText,
         excludePatternsText: state.excludePatternsText,
         regexSearch: state.regexSearch,
+        virtualizationEnabled: state.virtualizationEnabled,
         searchCollapsed: state.searchCollapsed,
         levelEnabled: state.levelEnabled
       };
@@ -559,6 +606,7 @@
         }
         if (typeof saved.excludePatternsText === 'string') state.excludePatternsText = saved.excludePatternsText;
         if (typeof saved.regexSearch === 'boolean') state.regexSearch = saved.regexSearch;
+        if (typeof saved.virtualizationEnabled === 'boolean') state.virtualizationEnabled = saved.virtualizationEnabled;
         if (typeof saved.searchCollapsed === 'boolean') state.searchCollapsed = saved.searchCollapsed;
         if (saved.levelEnabled && typeof saved.levelEnabled === 'object') {
           for (const level of LEVELS) {
@@ -652,6 +700,7 @@
     function hasActiveFilters() {
       if (parsePatternLines(state.includePatternsText).length) return true;
       if (parsePatternLines(state.excludePatternsText).length) return true;
+      if (state.regexSearch) return true;
       return LEVELS.some(level => !state.levelEnabled[level]);
     }
 
@@ -858,6 +907,14 @@
       els.logTextView.className = 'log-text';
       updateLogSurfaceWidth();
 
+      if (!state.virtualizationEnabled) {
+        if (!force && state.visibleRowStart === 0 && state.visibleRowEnd === totalRows) return;
+        state.visibleRowStart = 0;
+        state.visibleRowEnd = totalRows;
+        els.logTextView.innerHTML = state.renderRows.map(row => renderRowHtml(row, state.renderMatcher)).join('');
+        return;
+      }
+
       const rowHeight = getLogRowHeight();
       const containerTop = els.logTextView.getBoundingClientRect().top + window.scrollY;
       const viewportTop = Math.max(0, window.scrollY - containerTop);
@@ -879,6 +936,10 @@
     }
 
     function scheduleVisibleRowRender(force = false) {
+      if (!state.virtualizationEnabled) {
+        if (force) renderVisibleRows(true);
+        return;
+      }
       if (state.scrollRenderRaf) cancelAnimationFrame(state.scrollRenderRaf);
       state.scrollRenderRaf = requestAnimationFrame(() => {
         state.scrollRenderRaf = 0;
@@ -934,9 +995,11 @@
         return;
       }
       const searchMatcher = compileMatchers(state.includePatternsText);
-      setProgress(0.98, true);
-      await nextFrame();
       buildRenderRows(searchMatcher);
+      if (state.virtualizationEnabled) {
+        setProgress(0.98, true);
+        await nextFrame();
+      }
       renderVisibleRows(true);
     }
 
@@ -1012,17 +1075,20 @@
 
     function updateButtons() {
       const hasVisible = state.filteredIndexes.length > 0;
+      const hasFilters = hasActiveFilters();
       els.copyBtn.disabled = !hasVisible;
       els.downloadBtn.disabled = !hasVisible;
       els.regexBtn.classList.toggle('active', state.regexSearch);
-      els.searchToggleBtn.classList.toggle('active', !state.searchCollapsed);
+      els.virtualizationBtn.classList.toggle('active', state.virtualizationEnabled);
+      els.searchToggleBtn.classList.toggle('active', hasFilters);
       els.searchToggleBtn.setAttribute('aria-expanded', String(!state.searchCollapsed));
       els.searchDrawer.hidden = state.searchCollapsed;
       const activeFilters = [
         parsePatternLines(state.includePatternsText).length ? 'include' : '',
         parsePatternLines(state.excludePatternsText).length ? 'exclude' : '',
         state.regexSearch ? 'regex' : '',
-        LEVELS.some(level => !state.levelEnabled[level]) ? 'levels' : ''
+        LEVELS.some(level => !state.levelEnabled[level]) ? 'levels' : '',
+        !state.virtualizationEnabled ? 'full-render' : ''
       ].filter(Boolean);
       els.compactMeta.textContent = `Format: ${state.formatMode}${activeFilters.length ? ' • ' + activeFilters.join(', ') : ''}`;
       syncHeaderSpacer();
@@ -1207,11 +1273,22 @@
       els.excludePatterns.value = '';
       scheduleFilterApply(0);
     });
-    els.runParseBtn.addEventListener('click', () => { void parseCurrentText(); });
     els.regexBtn.addEventListener('click', () => {
       state.regexSearch = !state.regexSearch;
       updateButtons();
       scheduleFilterApply();
+    });
+    els.virtualizationBtn.addEventListener('click', () => {
+      state.virtualizationEnabled = !state.virtualizationEnabled;
+      if (state.scrollRenderRaf) {
+        cancelAnimationFrame(state.scrollRenderRaf);
+        state.scrollRenderRaf = 0;
+      }
+      state.visibleRowStart = -1;
+      state.visibleRowEnd = -1;
+      updateButtons();
+      renderVisibleRows(true);
+      scheduleSave();
     });
 
     els.formatMode.addEventListener('change', () => {

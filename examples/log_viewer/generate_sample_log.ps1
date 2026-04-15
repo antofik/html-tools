@@ -65,6 +65,14 @@ $messagesByLevel = @{
   )
 }
 
+$longLineFragments = @(
+  "payload={""tenant"":""north-europe"",""env"":""prod"",""featureFlags"":[""search-v2"",""payments-retry"",""bulk-export""],""requestContext"":{""locale"":""en-US"",""device"":""desktop"",""region"":""eu-west-1""}}",
+  "sql=select id, order_id, external_id, created_at, updated_at, retry_count, status, processing_node, correlation_id from order_events where tenant_id = 421 and status in ('PENDING','RETRY','FAILED') order by created_at desc limit 250",
+  "headers={x-request-id=6f2b0d7f18a54ce7, x-forwarded-for=10.42.8.14, user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/135.0.0.0 Safari/537.36, accept-language=en-US,en;q=0.9, traceparent=00-9af4126b6d0e4268b7f4d3b0d4b4cc85-c9de34fef5ab11f2-01}",
+  "requestUri=/api/v1/orders/export?tenant=421&region=eu-west-1&includeArchived=false&format=jsonl&download=true&cursor=eyJvZmZzZXQiOjQ4MDAsImxpbWl0IjoyNTAsInRpbWVzdGFtcCI6IjIwMjYtMDQtMTVUMTA6MTI6MzIuMzIxWiJ9",
+  "message=Batch synchronization completed with diagnostics=[cache-hit, db-read, db-write, metric-publish, event-dispatch, response-serialize, audit-log-write, downstream-notify, tracing-flush, cleanup]"
+)
+
 $exceptionTypes = @(
   "java.lang.IllegalStateException",
   "java.lang.RuntimeException",
@@ -124,6 +132,15 @@ function Get-RandomMessage {
   return $messages[(Get-Random -Minimum 0 -Maximum $messages.Count)]
 }
 
+function Get-RandomLongSuffix {
+  $fragmentCount = Get-Random -Minimum 1 -Maximum 4
+  $parts = [System.Collections.Generic.List[string]]::new()
+  for ($i = 0; $i -lt $fragmentCount; $i++) {
+    $parts.Add($longLineFragments[(Get-Random -Minimum 0 -Maximum $longLineFragments.Count)])
+  }
+  return ($parts -join " | ")
+}
+
 function Write-ErrorStackTrace {
   param(
     [System.IO.StreamWriter]$Writer
@@ -159,15 +176,29 @@ $outputFile = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
 
 $start = [datetime]"2026-04-15T10:12:32.321"
 $writer = [System.IO.StreamWriter]::new($outputFile, $false, [System.Text.UTF8Encoding]::new($false))
+$recentTraceIds = [System.Collections.Generic.List[string]]::new()
+$maxRecentTraceIds = 64
 
 try {
   for ($i = 0; $i -lt $LineCount; $i++) {
     $timestamp = $start.AddMilliseconds($i * (Get-Random -Minimum 15 -Maximum 180))
     $level = Get-WeightedLevel -Roll (Get-Random -Minimum 1 -Maximum 101)
-    $traceId = Get-RandomHex -Length 15
+    $reuseExistingTraceId = $recentTraceIds.Count -gt 0 -and ((Get-Random -Minimum 0 -Maximum 100) -lt 38)
+    if ($reuseExistingTraceId) {
+      $traceId = $recentTraceIds[(Get-Random -Minimum 0 -Maximum $recentTraceIds.Count)]
+    } else {
+      $traceId = Get-RandomHex -Length 15
+      $recentTraceIds.Add($traceId)
+      if ($recentTraceIds.Count -gt $maxRecentTraceIds) {
+        $recentTraceIds.RemoveAt(0)
+      }
+    }
     $threadId = Get-Random -Minimum 1 -Maximum 17
     $logger = $loggers[(Get-Random -Minimum 0 -Maximum $loggers.Count)]
     $message = Get-RandomMessage -Level $level
+    if ((Get-Random -Minimum 0 -Maximum 100) -lt 9) {
+      $message = "$message | $(Get-RandomLongSuffix)"
+    }
 
     $line = "{0}    {1,-5} {2}  [thread-{3}] {4,-12} {5}" -f `
       $timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"), `

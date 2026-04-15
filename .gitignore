@@ -1,3 +1,6 @@
 examples/log_viewer/minecraft.log
 AGENTS.md
 examples/log_viewer/sample-generated.log
+examples/log_viewer/extreme.log
+examples/log_viewer/large.log
+examples/log_viewer/small.log
