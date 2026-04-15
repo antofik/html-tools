@@ -96,9 +96,10 @@
     .log-preview-line { display: block; padding-left: 18px; color: #6b7280; background: rgba(148, 163, 184, 0.06); }
     .log-preview-line .log-line-inner { min-width: auto; }
     .log-preview-text { min-width: 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
-    .stacktrace-btn { width: 20px; height: 20px; min-width: 20px; padding: 0; border: none; background: transparent; color: #64748b; cursor: pointer; vertical-align: middle; }
-    .stacktrace-btn:hover { background: #f3f4f6; border-radius: 6px; }
-    .stacktrace-btn::before { content: "🧵"; font-size: 13px; line-height: 1; }
+    .detail-btn { width: 20px; height: 20px; min-width: 20px; padding: 0; border: none; background: transparent; color: #64748b; cursor: pointer; vertical-align: middle; border-radius: 6px; }
+    .detail-btn:hover { background: #f3f4f6; }
+    .stacktrace-btn::before { content: "💥"; font-size: 13px; line-height: 1; font-weight: 700; color: #b91c1c; }
+    .multiline-btn::before { content: "📚"; font-size: 11px; line-height: 1; font-weight: 700; color: #2563eb; }
     .log-ts { color: #9ca3af; }
     .log-bracket { color: #5183c9; }
     .log-level-mark { font-weight: 700; border-radius: 3px; padding: 0 2px; }
@@ -114,6 +115,12 @@
     .modal-close { width: 30px; height: 30px; min-width: 30px; padding: 0; }
     .modal-body { overflow: auto; padding: 14px; background: #fff; }
     .modal-pre { margin: 0; color: #111827; font-family: var(--mono); font-size: 13px; line-height: 1.45; white-space: pre; }
+    .stacktrace-lines { font-family: var(--mono); font-size: 13px; line-height: 1.45; color: #111827; white-space: pre; }
+    .stacktrace-line { display: block; }
+    .stacktrace-line.exception-head { color: #991b1b; font-weight: 700; }
+    .stacktrace-line.caused-by { color: #92400e; }
+    .stacktrace-line .stacktrace-cause { font-weight: 700; color: #b45309; }
+    .stacktrace-line .stacktrace-exception { font-weight: 700; color: #b91c1c; }
     .empty { padding: 32px 18px; color: var(--muted); font-size: 14px; }
     @media (max-width: 1080px) { .app-header { flex-direction: column; align-items: flex-start; } .compact-meta { max-width: 100%; } .search-row { grid-template-columns: 1fr; } .control-row.dual { grid-template-columns: 1fr; } }
   </style>
@@ -218,7 +225,18 @@
           <button id="stacktraceModalClose" class="icon-btn modal-close" type="button" aria-label="Close stack trace"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></span></button>
         </div>
         <div class="modal-body">
-          <pre id="stacktraceModalBody" class="modal-pre"></pre>
+          <div id="stacktraceModalBody" class="stacktrace-lines"></div>
+        </div>
+      </div>
+    </div>
+    <div id="multilineModal" class="modal-backdrop" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="multilineModalTitle">
+        <div class="modal-header">
+          <div id="multilineModalTitle" class="modal-title"></div>
+          <button id="multilineModalClose" class="icon-btn modal-close" type="button" aria-label="Close multiline details"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></span></button>
+        </div>
+        <div class="modal-body">
+          <pre id="multilineModalBody" class="modal-pre"></pre>
         </div>
       </div>
     </div>
@@ -458,7 +476,11 @@
       stacktraceModal: document.getElementById('stacktraceModal'),
       stacktraceModalTitle: document.getElementById('stacktraceModalTitle'),
       stacktraceModalBody: document.getElementById('stacktraceModalBody'),
-      stacktraceModalClose: document.getElementById('stacktraceModalClose')
+      stacktraceModalClose: document.getElementById('stacktraceModalClose'),
+      multilineModal: document.getElementById('multilineModal'),
+      multilineModalTitle: document.getElementById('multilineModalTitle'),
+      multilineModalBody: document.getElementById('multilineModalBody'),
+      multilineModalClose: document.getElementById('multilineModalClose')
     };
 
     function setStatus(message, kind = '') {
@@ -636,6 +658,16 @@
       return !!state.levelEnabled[level];
     }
 
+    function hasActiveFilters() {
+      if (state.searchText.trim()) return true;
+      if (state.regexSearch) return true;
+      if (state.threadFilter.trim()) return true;
+      if (state.loggerFilter.trim()) return true;
+      if (state.traceFilter.trim()) return true;
+      if (state.timeFrom || state.timeTo) return true;
+      return LEVELS.some(level => !state.levelEnabled[level]);
+    }
+
     function entrySearchBlob(entry) {
       return [entry.timestamp, entry.level, entry.thread, entry.logger, entry.traceId, entry.message, ...entry.continuation].join('\n');
     }
@@ -722,6 +754,41 @@
       return html;
     }
 
+    function isStacktraceEntry(entry) {
+      if (!entry || !entry.continuation.length) return false;
+      return entry.continuation.some(line => (
+        /^\s+at\s/.test(line) ||
+        /^\s*\.\.\. \d+ more$/.test(line) ||
+        /^Caused by:\s+/.test(line) ||
+        /^[A-Za-z_$][A-Za-z0-9_$.]*(?:Exception|Error|Throwable)(?::|\s|$)/.test(line)
+      ));
+    }
+
+    function renderStacktraceLine(line) {
+      const source = String(line || '');
+      let className = 'stacktrace-line';
+      let html = escapeHtml(source);
+      if (/^Caused by:\s+/.test(source)) {
+        className += ' caused-by';
+        html = html.replace(/^Caused by:/, '<span class="stacktrace-cause">Caused by:</span>');
+        html = html.replace(
+          /(Caused by:\s+)([A-Za-z_$][A-Za-z0-9_$.]*(?:Exception|Error|Throwable))/,
+          '$1<span class="stacktrace-exception">$2</span>'
+        );
+      } else if (/^[A-Za-z_$][A-Za-z0-9_$.]*(?:Exception|Error|Throwable)(?::|\s|$)/.test(source)) {
+        className += ' exception-head';
+        html = html.replace(
+          /^([A-Za-z_$][A-Za-z0-9_$.]*(?:Exception|Error|Throwable))/,
+          '<span class="stacktrace-exception">$1</span>'
+        );
+      }
+      return `<span class="${className}">${html}</span>`;
+    }
+
+    function renderStacktraceHtml(lines) {
+      return lines.map(renderStacktraceLine).join('');
+    }
+
     function renderEntriesHtml(entries, matcher) {
       let html = '';
       for (let entryOffset = 0; entryOffset < entries.length; entryOffset++) {
@@ -729,13 +796,14 @@
         const levelClass = String(entry.level || '').toLowerCase();
         const className = levelClass ? `log-line ${levelClass}` : 'log-line';
         const lineHtml = renderTextWithHighlights(entry.raw[0] || '', matcher, levelClass);
-        const stacktraceButtonHtml = entry.continuation.length
-          ? `<button class="stacktrace-btn" type="button" data-entry-index="${entry.index}" aria-label="Open multiline log"></button>`
+        const stacktrace = isStacktraceEntry(entry);
+        const detailButtonHtml = entry.continuation.length
+          ? `<button class="detail-btn ${stacktrace ? 'stacktrace-btn' : 'multiline-btn'}" type="button" data-entry-index="${entry.index}" aria-label="${stacktrace ? 'Open stack trace' : 'Open multiline log'}"></button>`
           : '';
         html += `<span class="${className}"><span class="log-line-inner"><span class="log-line-text">${lineHtml}</span></span></span>`;
         if (entry.continuation.length) {
           const previewHtml = renderTextWithHighlights(entry.continuation[0], matcher, '');
-          html += `<span class="log-preview-line"><span class="log-line-inner">${stacktraceButtonHtml}<span class="log-preview-text">${previewHtml}</span></span></span>`;
+          html += `<span class="log-preview-line"><span class="log-line-inner">${detailButtonHtml}<span class="log-preview-text">${previewHtml}</span></span></span>`;
         }
       }
       return html;
@@ -745,7 +813,7 @@
       const entry = state.entries[entryIndex];
       if (!entry || !entry.continuation.length) return;
       els.stacktraceModalTitle.textContent = entry.raw[0] || 'Multiline log entry';
-      els.stacktraceModalBody.textContent = entry.continuation.join('\n');
+      els.stacktraceModalBody.innerHTML = renderStacktraceHtml(entry.continuation);
       els.stacktraceModal.hidden = false;
       document.body.style.overflow = 'hidden';
       els.stacktraceModalClose.focus();
@@ -754,7 +822,24 @@
     function closeStacktraceModal() {
       els.stacktraceModal.hidden = true;
       els.stacktraceModalTitle.textContent = '';
-      els.stacktraceModalBody.textContent = '';
+      els.stacktraceModalBody.innerHTML = '';
+      document.body.style.overflow = '';
+    }
+
+    function openMultilineModal(entryIndex) {
+      const entry = state.entries[entryIndex];
+      if (!entry || !entry.continuation.length) return;
+      els.multilineModalTitle.textContent = entry.raw[0] || 'Multiline log entry';
+      els.multilineModalBody.textContent = entry.continuation.join('\n');
+      els.multilineModal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      els.multilineModalClose.focus();
+    }
+
+    function closeMultilineModal() {
+      els.multilineModal.hidden = true;
+      els.multilineModalTitle.textContent = '';
+      els.multilineModalBody.textContent = '';
       document.body.style.overflow = '';
     }
 
@@ -780,6 +865,17 @@
       clearTimeout(state.filterTimer);
       state.filterTimer = null;
       const token = ++state.filterToken;
+      if (!hasActiveFilters()) {
+        state.filteredIndexes = state.entries.map((_, index) => index);
+        updateStats();
+        await renderLogText();
+        updateButtons();
+        scheduleSave();
+        finishProgress();
+        setStatus('', '');
+        return;
+      }
+
       setStatus('Filtering log...', '');
       const textMatcher = state.regexSearch
         ? safeRegex(state.searchText)
@@ -990,6 +1086,7 @@
       state.entries = [];
       state.filteredIndexes = [];
       state.counts = null;
+      els.fileInput.value = '';
       updateMeta();
       updateStats();
       void renderLogText();
@@ -1025,7 +1122,10 @@
       scheduleSave();
     }
 
-    els.loadBtn.addEventListener('click', () => els.fileInput.click());
+    els.loadBtn.addEventListener('click', () => {
+      els.fileInput.value = '';
+      els.fileInput.click();
+    });
     els.fileInput.addEventListener('change', event => loadFile(event.target.files?.[0]));
     els.pasteBtn.addEventListener('click', () => { void pasteFromClipboard(); });
     els.parseBtn.addEventListener('click', () => { void parseCurrentText(); });
@@ -1110,16 +1210,28 @@
       scheduleFilterApply();
     });
     els.logTextView.addEventListener('click', event => {
-      const button = event.target.closest('.stacktrace-btn[data-entry-index]');
+      const button = event.target.closest('.detail-btn[data-entry-index]');
       if (!button) return;
-      openStacktraceModal(Number(button.dataset.entryIndex));
+      const entryIndex = Number(button.dataset.entryIndex);
+      const entry = state.entries[entryIndex];
+      if (isStacktraceEntry(entry)) {
+        openStacktraceModal(entryIndex);
+      } else {
+        openMultilineModal(entryIndex);
+      }
     });
     els.stacktraceModalClose.addEventListener('click', closeStacktraceModal);
     els.stacktraceModal.addEventListener('click', event => {
       if (event.target === els.stacktraceModal) closeStacktraceModal();
     });
+    els.multilineModalClose.addEventListener('click', closeMultilineModal);
+    els.multilineModal.addEventListener('click', event => {
+      if (event.target === els.multilineModal) closeMultilineModal();
+    });
     window.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !els.stacktraceModal.hidden) closeStacktraceModal();
+      if (event.key !== 'Escape') return;
+      if (!els.stacktraceModal.hidden) closeStacktraceModal();
+      if (!els.multilineModal.hidden) closeMultilineModal();
     });
 
     window.addEventListener('beforeunload', () => {
