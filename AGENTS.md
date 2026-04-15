@@ -76,6 +76,24 @@ This repository contains arbitrary tools that:
   - Is intended for offline inspection and local token-shape generation, not for real cryptographic verification.
   - Persists token input, editable parts, and selected signature mode in `localStorage`.
 
+- **Log Viewer** (`log_viewer.html`)
+  - Loads a single local log file or accepts pasted log text directly.
+  - Is intended for offline inspection of backend and browser logs in a browser-only workflow.
+  - Parses common application log shapes such as Spring / Java logs, timestamp-prefixed generic logs, browser-console style logs, and raw lines.
+  - Groups multiline stack traces and continuation lines under the originating log entry.
+  - Renders parsed logs as structured rows rather than a single raw text block.
+  - Uses a worker-based parser with progress updates during large file reading and preprocessing.
+  - Uses virtualized rendering for the log entry list to keep scrolling responsive on large files.
+  - Supports selecting log format explicitly or using auto-detection.
+  - Supports filtering by `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, and `FATAL`.
+  - Supports free-text and regex search across visible log content.
+  - Supports filtering by thread name, logger name, trace/request/correlation ID, and timestamp range when timestamps are parseable.
+  - Highlights log levels with distinct colors while preserving a light theme.
+  - Supports collapsing and expanding multiline entries individually or in bulk.
+  - Supports wrapping or preserving horizontal formatting in the message area.
+  - Supports copying or exporting the currently filtered subset of log text.
+  - Persists loaded text, active filters, collapsed state, and UI settings in `localStorage`.
+
 ### Notes For Future Updates
 
 - Keep tools as single-file HTML documents unless there is a clear reason to change the repository model.
@@ -85,29 +103,3 @@ This repository contains arbitrary tools that:
 ### Candidate Tools
 
 The following tools are planned candidates and are **not implemented yet**. These descriptions are drafts and should be adjusted before development.
-
-- **Log Viewer** (`log_viewer.html`)
-  - Loads a single local log file or accepts pasted log text directly.
-  - Is intended for offline inspection of large backend and browser logs in a browser-only workflow.
-  - Parses common application log shapes such as:
-    - timestamp-prefixed logs
-    - Spring Boot / Java logs with level, PID, thread, and logger name
-    - browser console style logs
-    - multiline stack traces
-  - Presents logs as structured rows rather than a single raw text block.
-  - Log view should use virtualization so that it could easily display large log files (50-100MB) and do not lag on scroll
-  - During opening and pre-processing of large files app should show progress bar and do not hang
-  - Supports filtering by log level such as `TRACE`, `DEBUG`, `INFO`, `WARN`, and `ERROR`.
-  - Supports free-text and regex search across the visible log content.
-  - Supports quick extraction and filtering by common operational fields when present:
-    - timestamp
-    - thread name
-    - logger/class name
-    - request ID / trace ID / correlation ID
-  - Groups multiline stack traces and continuation lines under the originating log entry.
-  - Supports specifying log format so that app could colorize different parts of log with different colors (i.e. timestamp, correlationId, thread, message)
-  - Supports collapsing and expanding stack traces and other multiline entries.
-  - Highlights log levels with distinct colors while preserving a light theme.
-  - Supports timestamp-aware sorting and time-range filtering when timestamps can be parsed.
-  - Supports copying or exporting the currently filtered subset of logs.
-  - Persists loaded text, active filters, search text, collapsed state, and UI settings in `localStorage`.

@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log Viewer</title>
+  <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23ffffff"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="%23e5e7eb" stroke-width="2"/><path d="M17 18v28" stroke="%230f172a" stroke-width="4" stroke-linecap="round"/><path d="M31 24h16" stroke="%232563eb" stroke-width="4" stroke-linecap="round"/><path d="M31 34h10" stroke="%23f59e0b" stroke-width="4" stroke-linecap="round"/><path d="M31 44h18" stroke="%23047857" stroke-width="4" stroke-linecap="round"/></svg>' />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --panel-soft: #fafafa;
+      --text: #334155;
+      --muted: #64748b;
+      --border: #e5e7eb;
+      --button: #ffffff;
+      --button-hover: #f8fafc;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --active-border: #22c55e;
+      --active-text: #15803d;
+      --active-bg: #f0fdf4;
+      --trace: #64748b;
+      --debug: #2563eb;
+      --info: #0f766e;
+      --warn: #b45309;
+      --error: #b91c1c;
+      --fatal: #7f1d1d;
+      --level-bg: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: auto; overflow-y: auto; }
+    button, input, select, textarea { font: inherit; }
+    .container { width: 100%; max-width: none; margin: 0; padding: 0 0 16px; min-height: 100vh; }
+    .header-shell { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: var(--bg); padding: 0 12px 12px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); }
+    .header-spacer { height: 0; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0 0; margin-bottom: 10px; }
+    h1 { margin: 0; font-size: 22px; line-height: 1.1; color: #111827; }
+    .toolbar, .panel-actions, .row-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .layout { display: block; padding: 0; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; min-width: 0; }
+    .chrome-panel { overflow: hidden; }
+    .log-panel { overflow: visible; }
+    .panel-header { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--panel-soft); min-width: 0; min-height: 50px; }
+    .panel-title-row { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+    .panel-title { font-weight: 700; font-size: 14px; color: #374151; letter-spacing: .02em; white-space: nowrap; }
+    .status { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .status.ok { color: #047857; }
+    .status.error { color: #b91c1c; }
+    .panel-body { padding: 0; }
+    button, input, select { appearance: none; border: 1px solid var(--border); background: var(--button); color: #374151; border-radius: 10px; transition: .15s ease; }
+    button:hover, input:hover, select:hover { background: var(--button-hover); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .icon-btn { width: 34px; height: 34px; min-width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+    .icon-btn.active, .toggle-btn.active, .level-btn.active { border-color: var(--active-border); color: var(--active-text); background: var(--active-bg); }
+    .btn-icon { width: 16px; height: 16px; display: inline-block; flex: 0 0 16px; color: currentColor; }
+    .btn-icon svg { width: 16px; height: 16px; display: block; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .control-grid { display: grid; gap: 10px; padding: 10px 12px 12px; }
+    .control-row { display: grid; gap: 6px; }
+    .control-row.dual { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .control-label { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+    .field, select, .search-input { width: 100%; min-height: 34px; padding: 7px 10px; background: #fff; }
+    .toggle-group, .level-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .toggle-btn, .level-btn { min-height: 32px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .viewer { position: relative; border: none; border-radius: 0; background: #fff; overflow: visible; }
+    .viewer.progressing::after { content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0.42); pointer-events: none; z-index: 2; }
+    .progress-bar { position: absolute; left: 0; top: 0; height: 3px; width: 0; background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 1px 6px rgba(34, 197, 94, 0.35); transition: width .12s linear, opacity .12s ease; opacity: 0; z-index: 3; }
+    .progress-bar.visible { opacity: 1; }
+    .top-strip { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--border); background: #fff; }
+    .top-strip-left, .top-strip-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+    .compact-btn { min-height: 30px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .compact-btn.active { border-color: var(--active-border); color: var(--active-text); background: var(--active-bg); }
+    .compact-meta { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 120px; max-width: 48vw; }
+    .count-badge { border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #fff; }
+    .count-badge.warn { color: var(--warn); background: #fffbeb; border-color: #fde68a; }
+    .count-badge.error { color: var(--error); background: #fef2f2; border-color: #fecaca; }
+    .top-drawer { border-bottom: 1px solid var(--border); background: #fff; }
+    .top-drawer[hidden] { display: none; }
+    .search-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; align-items: center; }
+    .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; white-space: nowrap; }
+    .log-scroll { overflow: visible; background: #fff; font-family: var(--mono); font-size: 13px; line-height: 1.45; width: max-content; min-width: 100%; }
+    .log-text { margin: 0; padding: 12px 14px; color: #111827; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; tab-size: 2; width: max-content; min-width: 100%; }
+    .log-scroll.nowrap .log-text { white-space: pre; word-break: normal; overflow-wrap: normal; display: block; }
+    .log-line { display: block; color: #111827; }
+    .log-line.trace { color: #6b7280; }
+    .log-line.debug { color: #4b5563; }
+    .log-line.info { color: #0f172a; }
+    .log-line.warn { color: #92400e; background: rgba(245, 158, 11, 0.08); }
+    .log-line.error, .log-line.fatal { color: #991b1b; background: rgba(220, 38, 38, 0.08); }
+    .log-ts { color: #9ca3af; }
+    .log-bracket { color: #5183c9; }
+    .log-level-mark { font-weight: 700; border-radius: 3px; padding: 0 2px; }
+    .log-level-mark.warn { color: #b45309; background: #fef3c7; }
+    .log-level-mark.error, .log-level-mark.fatal { color: #b91c1c; background: #fee2e2; }
+    .segment-hit { background: #bbf7d0; color: inherit; border-radius: 2px; }
+    .token-ts, .token-trace, .token-debug, .token-info, .token-warn, .token-error, .token-fatal { color: inherit; background: transparent; font-weight: inherit; }
+    .empty { padding: 32px 18px; color: var(--muted); font-size: 14px; }
+    @media (max-width: 1080px) { .app-header { flex-direction: column; align-items: flex-start; } .compact-meta { max-width: 100%; } .search-row { grid-template-columns: 1fr; } .control-row.dual { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="headerShell" class="header-shell">
+      <div class="app-header">
+        <div class="panel-title-row">
+          <h1>Log Viewer</h1>
+          <div id="headerMeta" class="status"></div>
+          <div id="status" class="status"></div>
+        </div>
+        <div class="toolbar">
+          <button id="loadBtn" class="icon-btn" type="button" title="Open log file" aria-label="Open log file"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span></button>
+          <button id="pasteBtn" class="icon-btn" type="button" title="Paste from clipboard" aria-label="Paste from clipboard"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M9 2h6v4H9z"/><path d="M7 6H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1"/></svg></span></button>
+          <button id="parseBtn" class="icon-btn" type="button" title="Parse log" aria-label="Parse log"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12"/><path d="M6 12h12"/><path d="M6 20h12"/><path d="m14 8 4 4-4 4"/></svg></span></button>
+          <button id="copyBtn" class="icon-btn" type="button" title="Copy filtered log" aria-label="Copy filtered log" disabled><span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span></button>
+          <button id="downloadBtn" class="icon-btn" type="button" title="Download filtered log" aria-label="Download filtered log" disabled><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span></button>
+          <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span></button>
+        </div>
+      </div>
+      <div class="panel chrome-panel">
+        <div class="top-strip">
+          <div class="top-strip-left">
+            <button id="searchToggleBtn" class="compact-btn" type="button" aria-expanded="false" aria-controls="searchDrawer">Search</button>
+            <button id="filtersToggleBtn" class="compact-btn" type="button" aria-expanded="false" aria-controls="filtersDrawer">Filters</button>
+            <div id="compactMeta" class="compact-meta">Format: auto</div>
+          </div>
+          <div class="top-strip-right">
+            <div id="warnCount" class="count-badge warn">Warn: 0</div>
+            <div id="errorCount" class="count-badge error">Error: 0</div>
+            <button id="regexBtn" class="toggle-btn" type="button">Regex</button>
+            <button id="wrapBtn" class="toggle-btn active" type="button">Wrap</button>
+          </div>
+        </div>
+        <div id="searchDrawer" class="top-drawer" hidden>
+          <div class="control-grid">
+            <div class="search-row">
+              <select id="formatMode">
+                <option value="auto">Auto detect</option>
+                <option value="spring">Spring / Java</option>
+                <option value="generic">Generic timestamp log</option>
+                <option value="browser">Browser console</option>
+                <option value="raw">Raw lines</option>
+              </select>
+              <input id="searchInput" class="search-input" type="text" placeholder="Search visible logs" />
+              <button id="clearSearchBtn" class="compact-btn" type="button">Clear search</button>
+              <button id="runParseBtn" class="compact-btn" type="button">Re-parse</button>
+            </div>
+          </div>
+        </div>
+        <div id="filtersDrawer" class="top-drawer" hidden>
+          <div class="control-grid">
+            <div class="control-row">
+              <div class="control-label">Levels</div>
+              <div id="levelGroup" class="level-group"></div>
+            </div>
+            <div class="control-row dual">
+              <div class="control-row">
+                <div class="control-label">Thread contains</div>
+                <input id="threadFilter" class="field" type="text" placeholder="http-nio, main, worker..." />
+              </div>
+              <div class="control-row">
+                <div class="control-label">Logger contains</div>
+                <input id="loggerFilter" class="field" type="text" placeholder="com.example..." />
+              </div>
+            </div>
+            <div class="control-row dual">
+              <div class="control-row">
+                <div class="control-label">Trace / Request ID contains</div>
+                <input id="traceFilter" class="field" type="text" placeholder="traceId, requestId..." />
+              </div>
+              <div class="control-row">
+                <div class="control-label">Time range</div>
+                <div class="control-row dual">
+                  <input id="timeFrom" class="field" type="datetime-local" />
+                  <input id="timeTo" class="field" type="datetime-local" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="headerSpacer" class="header-spacer" aria-hidden="true"></div>
+
+    <div id="layout" class="layout">
+      <div class="panel log-panel">
+        <div class="panel-body">
+          <div id="resultViewer" class="viewer">
+            <div id="progressBar" class="progress-bar"></div>
+            <div id="logScroll" class="log-scroll"><pre id="logTextView" class="log-text"></pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <input id="fileInput" type="file" accept=".log,.txt,.out,.json,text/plain" hidden />
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'log_viewer_state_v1';
+    const SAVE_DEBOUNCE_MS = 220;
+    const FILTER_DEBOUNCE_MS = 250;
+    const FILTER_CHUNK_SIZE = 2000;
+    const LEVELS = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'];
+
+    const WORKER_SCRIPT = `
+      const LEVEL_RE = /\\b(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\b/;
+      const ID_RE = /\\b(?:trace[_-]?id|request[_-]?id|req[_-]?id|correlation[_-]?id|span[_-]?id)\\b\\s*[:=]\\s*([A-Za-z0-9._:-]+)/i;
+      const SPRING_RE = /^(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\s+(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s+(?:[A-Za-z0-9._:-]+\\s+)?(?:\\d+\\s+---\\s+)?\\[([^\\]]+)\\]\\s+([^:]+?)\\s*:\\s*(.*)$/;
+      const SAMPLE_APP_RE = /^(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\s+(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s+([A-Za-z0-9._:-]+)\\s+\\[([^\\]]+)\\]\\s+([A-Za-z0-9.$_-]+)\\s{2,}(.*)$/;
+      const GENERIC_TS_RE = /^(\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?(?:Z|[+-]\\d{2}:?\\d{2})?)\\s+(.*)$/;
+      const BROWSER_RE = /^\\[?(\\d{4}-\\d{2}-\\d{2}(?:[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d{3,6})?)?(?:Z|[+-]\\d{2}:?\\d{2})?)\\]?\\s*(TRACE|DEBUG|INFO|WARN|ERROR|FATAL|LOG)?\\s*[:\\-]?\\s*(.*)$/i;
+      const LEVEL_PREFIX_RE = /^(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s*[:\\-]?\\s*(.*)$/;
+
+      function normalizeTimestamp(raw) {
+        if (!raw) return { text: '', ms: null };
+        let value = String(raw).trim().replace(',', '.');
+        if (/^\\d{4}-\\d{2}-\\d{2} \\d/.test(value)) value = value.replace(' ', 'T');
+        const ms = Date.parse(value);
+        return { text: raw, ms: Number.isFinite(ms) ? ms : null };
+      }
+
+      function extractSupplemental(rest, entry) {
+        const idMatch = rest.match(ID_RE);
+        if (idMatch) entry.traceId = idMatch[1];
+        if (!entry.thread) {
+          const bracketedThreadMatch = rest.match(/^\\[[^\\]]+\\]\\s+\\[([^\\]/]+?)(?:\\/(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL|LOG))?\\]/i);
+          if (bracketedThreadMatch) {
+            entry.thread = bracketedThreadMatch[1].trim();
+          } else {
+            const threadMatch = rest.match(/\\[([^\\]]+)\\]/);
+            if (threadMatch) entry.thread = threadMatch[1];
+          }
+        }
+        if (!entry.level) {
+          const levelMatch = rest.match(LEVEL_RE);
+          if (levelMatch) entry.level = levelMatch[1];
+        }
+      }
+
+      function parseLineStart(line, mode) {
+        if (!line) return null;
+        const trimmed = line.trimEnd();
+
+        if (mode === 'spring' || mode === 'auto') {
+          const match = trimmed.match(SPRING_RE);
+          if (match) {
+            const ts = normalizeTimestamp(match[1]);
+            const entry = { timestamp: ts.text, timestampMs: ts.ms, level: match[2], thread: match[3], logger: match[4].trim(), message: match[5], traceId: '', format: 'spring' };
+            extractSupplemental(trimmed, entry);
+            return entry;
+          }
+
+          const sampleMatch = trimmed.match(SAMPLE_APP_RE);
+          if (sampleMatch) {
+            const ts = normalizeTimestamp(sampleMatch[1]);
+            const entry = { timestamp: ts.text, timestampMs: ts.ms, level: sampleMatch[2], thread: sampleMatch[4], logger: sampleMatch[5].trim(), message: sampleMatch[6], traceId: sampleMatch[3], format: 'spring' };
+            extractSupplemental(trimmed, entry);
+            return entry;
+          }
+        }
+
+        if (mode === 'browser' || mode === 'auto') {
+          const match = trimmed.match(BROWSER_RE);
+          if (match && (match[1] || match[2])) {
+            const ts = normalizeTimestamp(match[1]);
+            const entry = { timestamp: ts.text, timestampMs: ts.ms, level: (match[2] || '').toUpperCase(), thread: '', logger: '', message: match[3] || '', traceId: '', format: 'browser' };
+            extractSupplemental(trimmed, entry);
+            return entry;
+          }
+        }
+
+        if (mode === 'generic' || mode === 'auto') {
+          const match = trimmed.match(GENERIC_TS_RE);
+          if (match) {
+            const ts = normalizeTimestamp(match[1]);
+            const rest = match[2];
+            const entry = { timestamp: ts.text, timestampMs: ts.ms, level: '', thread: '', logger: '', message: rest, traceId: '', format: 'generic' };
+            extractSupplemental(rest, entry);
+            const loggerMatch = rest.match(/\\]\\s+([^:]+?)\\s*:\\s*(.*)$/);
+            if (loggerMatch) {
+              entry.logger = loggerMatch[1].trim();
+              entry.message = loggerMatch[2];
+            }
+            return entry;
+          }
+        }
+
+        if (mode !== 'raw') {
+          const levelOnly = trimmed.match(LEVEL_PREFIX_RE);
+          if (levelOnly) {
+            const entry = { timestamp: '', timestampMs: null, level: levelOnly[1], thread: '', logger: '', message: levelOnly[2], traceId: '', format: mode === 'auto' ? 'generic' : mode };
+            extractSupplemental(trimmed, entry);
+            return entry;
+          }
+        }
+
+        if (mode === 'raw') {
+          const entry = { timestamp: '', timestampMs: null, level: '', thread: '', logger: '', message: trimmed, traceId: '', format: 'raw' };
+          extractSupplemental(trimmed, entry);
+          return entry;
+        }
+
+        return null;
+      }
+
+      function isContinuationLine(line) {
+        return /^\\s+/.test(line) || /^\\tat\\s/.test(line) || /^Caused by:/.test(line) || /^Suppressed:/.test(line) || /^\\.\\.\\. \\d+ common frames omitted$/.test(line) || /^Nested exception is:/.test(line);
+      }
+
+      self.onmessage = event => {
+        const data = event.data || {};
+        if (data.type !== 'parse') return;
+        const text = String(data.text || '');
+        const mode = data.mode || 'auto';
+        const lines = text.split(/\\r?\\n/);
+        const total = lines.length || 1;
+        const entries = [];
+        let current = null;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const parsed = parseLineStart(line, mode);
+          const shouldStart = !!parsed;
+          const continuation = current && !shouldStart && (isContinuationLine(line) || line === '' || current.continuation.length > 0);
+
+          if (shouldStart) {
+            if (current) entries.push(current);
+            current = { index: entries.length, timestamp: parsed.timestamp || '', timestampMs: parsed.timestampMs ?? null, level: parsed.level || '', thread: parsed.thread || '', logger: parsed.logger || '', traceId: parsed.traceId || '', message: parsed.message || '', continuation: [], raw: [line], format: parsed.format || mode };
+          } else if (continuation) {
+            current.continuation.push(line);
+            current.raw.push(line);
+          } else if (current) {
+            entries.push(current);
+            current = { index: entries.length, timestamp: '', timestampMs: null, level: '', thread: '', logger: '', traceId: '', message: line, continuation: [], raw: [line], format: mode === 'auto' ? 'raw' : mode };
+          } else {
+            current = { index: entries.length, timestamp: '', timestampMs: null, level: '', thread: '', logger: '', traceId: '', message: line, continuation: [], raw: [line], format: mode === 'auto' ? 'raw' : mode };
+          }
+
+          if ((i + 1) % 4000 === 0 || i === lines.length - 1) {
+            self.postMessage({ type: 'progress', value: 0.12 + 0.78 * ((i + 1) / total) });
+          }
+        }
+
+        if (current) entries.push(current);
+
+        const counts = { TRACE: 0, DEBUG: 0, INFO: 0, WARN: 0, ERROR: 0, FATAL: 0, NONE: 0, multiline: 0, timestamped: 0 };
+        for (const entry of entries) {
+          const level = entry.level && counts[entry.level] !== undefined ? entry.level : 'NONE';
+          counts[level] += 1;
+          if (entry.continuation.length) counts.multiline += 1;
+          if (entry.timestampMs !== null) counts.timestamped += 1;
+        }
+
+        self.postMessage({ type: 'done', entries, counts });
+      };
+    `;
+
+    const state = {
+      rawText: '',
+      fileName: '',
+      fileSize: 0,
+      formatMode: 'auto',
+      searchText: '',
+      regexSearch: false,
+      wrap: true,
+      searchCollapsed: true,
+      filtersCollapsed: true,
+      levelEnabled: Object.fromEntries(LEVELS.map(level => [level, true])),
+      threadFilter: '',
+      loggerFilter: '',
+      traceFilter: '',
+      timeFrom: '',
+      timeTo: '',
+      entries: [],
+      filteredIndexes: [],
+      counts: null,
+      fileToken: 0,
+      filterToken: 0,
+      worker: null,
+      workerUrl: null,
+      saveTimer: null,
+      filterTimer: null,
+      parsing: false
+    };
+
+    const els = {
+      layout: document.getElementById('layout'),
+      headerMeta: document.getElementById('headerMeta'),
+      status: document.getElementById('status'),
+      headerShell: document.getElementById('headerShell'),
+      headerSpacer: document.getElementById('headerSpacer'),
+      warnCount: document.getElementById('warnCount'),
+      errorCount: document.getElementById('errorCount'),
+      fileInput: document.getElementById('fileInput'),
+      loadBtn: document.getElementById('loadBtn'),
+      pasteBtn: document.getElementById('pasteBtn'),
+      parseBtn: document.getElementById('parseBtn'),
+      copyBtn: document.getElementById('copyBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      formatMode: document.getElementById('formatMode'),
+      searchInput: document.getElementById('searchInput'),
+      regexBtn: document.getElementById('regexBtn'),
+      wrapBtn: document.getElementById('wrapBtn'),
+      levelGroup: document.getElementById('levelGroup'),
+      threadFilter: document.getElementById('threadFilter'),
+      loggerFilter: document.getElementById('loggerFilter'),
+      traceFilter: document.getElementById('traceFilter'),
+      timeFrom: document.getElementById('timeFrom'),
+      timeTo: document.getElementById('timeTo'),
+      resultViewer: document.getElementById('resultViewer'),
+      progressBar: document.getElementById('progressBar'),
+      compactMeta: document.getElementById('compactMeta'),
+      searchToggleBtn: document.getElementById('searchToggleBtn'),
+      filtersToggleBtn: document.getElementById('filtersToggleBtn'),
+      clearSearchBtn: document.getElementById('clearSearchBtn'),
+      runParseBtn: document.getElementById('runParseBtn'),
+      searchDrawer: document.getElementById('searchDrawer'),
+      filtersDrawer: document.getElementById('filtersDrawer'),
+      logScroll: document.getElementById('logScroll'),
+      logTextView: document.getElementById('logTextView')
+    };
+
+    function setStatus(message, kind = '') {
+      if (kind === 'error') {
+        els.status.textContent = message;
+        els.status.className = 'status error';
+      } else if (message) {
+        els.status.textContent = message;
+        els.status.className = 'status';
+      } else {
+        els.status.textContent = '';
+        els.status.className = 'status';
+      }
+      syncHeaderSpacer();
+    }
+
+    function setProgress(value, visible) {
+      els.resultViewer.classList.toggle('progressing', !!visible);
+      els.progressBar.classList.toggle('visible', !!visible);
+      els.progressBar.style.width = `${Math.max(0, Math.min(100, value * 100))}%`;
+    }
+
+    function beginParsing(message) {
+      state.parsing = true;
+      setStatus(message, '');
+      setProgress(0.08, true);
+      els.parseBtn.disabled = true;
+    }
+
+    function finishParsing() {
+      state.parsing = false;
+      setProgress(1, false);
+      els.parseBtn.disabled = false;
+    }
+
+    function finishProgress() {
+      setProgress(1, false);
+    }
+
+    function scheduleSave() {
+      clearTimeout(state.saveTimer);
+      state.saveTimer = setTimeout(saveStateNow, SAVE_DEBOUNCE_MS);
+    }
+
+    function scheduleFilterApply(delayMs = FILTER_DEBOUNCE_MS) {
+      clearTimeout(state.filterTimer);
+      state.filterTimer = setTimeout(() => {
+        state.filterTimer = null;
+        void applyFilters();
+      }, delayMs);
+    }
+
+    function nextFrame() {
+      return new Promise(resolve => requestAnimationFrame(() => resolve()));
+    }
+
+    function syncHeaderSpacer() {
+      const height = els.headerShell ? Math.ceil(els.headerShell.getBoundingClientRect().height) : 0;
+      if (els.headerSpacer) els.headerSpacer.style.height = `${height}px`;
+    }
+
+    function saveStateNow() {
+      const payload = {
+        rawText: state.rawText,
+        fileName: state.fileName,
+        fileSize: state.fileSize,
+        formatMode: state.formatMode,
+        searchText: state.searchText,
+        regexSearch: state.regexSearch,
+        wrap: state.wrap,
+        searchCollapsed: state.searchCollapsed,
+        filtersCollapsed: state.filtersCollapsed,
+        levelEnabled: state.levelEnabled,
+        threadFilter: state.threadFilter,
+        loggerFilter: state.loggerFilter,
+        traceFilter: state.traceFilter,
+        timeFrom: state.timeFrom,
+        timeTo: state.timeTo
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.rawText === 'string') {
+          state.rawText = saved.rawText;
+        }
+        if (typeof saved.fileName === 'string') state.fileName = saved.fileName;
+        if (typeof saved.fileSize === 'number') state.fileSize = saved.fileSize;
+        if (typeof saved.formatMode === 'string') state.formatMode = saved.formatMode;
+        if (typeof saved.searchText === 'string') state.searchText = saved.searchText;
+        if (typeof saved.regexSearch === 'boolean') state.regexSearch = saved.regexSearch;
+        if (typeof saved.wrap === 'boolean') state.wrap = saved.wrap;
+        if (typeof saved.searchCollapsed === 'boolean') state.searchCollapsed = saved.searchCollapsed;
+        if (typeof saved.filtersCollapsed === 'boolean') state.filtersCollapsed = saved.filtersCollapsed;
+        if (saved.levelEnabled && typeof saved.levelEnabled === 'object') {
+          for (const level of LEVELS) {
+            if (typeof saved.levelEnabled[level] === 'boolean') state.levelEnabled[level] = saved.levelEnabled[level];
+          }
+        }
+        if (typeof saved.threadFilter === 'string') state.threadFilter = saved.threadFilter;
+        if (typeof saved.loggerFilter === 'string') state.loggerFilter = saved.loggerFilter;
+        if (typeof saved.traceFilter === 'string') state.traceFilter = saved.traceFilter;
+        if (typeof saved.timeFrom === 'string') state.timeFrom = saved.timeFrom;
+        if (typeof saved.timeTo === 'string') state.timeTo = saved.timeTo;
+      } catch {}
+    }
+
+    function getWorker() {
+      if (state.worker) return state.worker;
+      if (!state.workerUrl) state.workerUrl = URL.createObjectURL(new Blob([WORKER_SCRIPT], { type: 'text/javascript' }));
+      state.worker = new Worker(state.workerUrl);
+      return state.worker;
+    }
+
+    function parseLogs(text, mode) {
+      return new Promise((resolve, reject) => {
+        const worker = getWorker();
+        const onMessage = event => {
+          const payload = event.data || {};
+          if (payload.type === 'progress') {
+            setProgress(payload.value, true);
+            return;
+          }
+          if (payload.type === 'done') {
+            cleanup();
+            resolve(payload);
+          }
+        };
+        const onError = err => {
+          cleanup();
+          reject(err instanceof Error ? err : new Error(String(err?.message || err)));
+        };
+        const cleanup = () => {
+          worker.removeEventListener('message', onMessage);
+          worker.removeEventListener('error', onError);
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        worker.postMessage({ type: 'parse', text, mode });
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function safeRegex(pattern) {
+      if (!pattern) return null;
+      try {
+        return new RegExp(pattern, 'ig');
+      } catch {
+        return null;
+      }
+    }
+
+    function dateTimeLocalToMs(value) {
+      if (!value) return null;
+      const ms = Date.parse(value);
+      return Number.isFinite(ms) ? ms : null;
+    }
+
+    function isLevelEnabled(level) {
+      if (!level) return true;
+      return !!state.levelEnabled[level];
+    }
+
+    function entrySearchBlob(entry) {
+      return [entry.timestamp, entry.level, entry.thread, entry.logger, entry.traceId, entry.message, ...entry.continuation].join('\n');
+    }
+
+    function matchesSearch(entry, matcher) {
+      if (!matcher) return true;
+      const blob = entrySearchBlob(entry);
+      if (matcher instanceof RegExp) {
+        matcher.lastIndex = 0;
+        return matcher.test(blob);
+      }
+      return blob.toLowerCase().includes(matcher);
+    }
+
+    function buildRanges(text, matcher) {
+      const ranges = [];
+      const source = String(text || '');
+      if (matcher instanceof RegExp) {
+        const re = safeRegex(matcher.source);
+        if (!re) return ranges;
+        for (let match; (match = re.exec(source)); ) {
+          if (!match[0]) break;
+          ranges.push({ start: match.index, end: match.index + match[0].length, className: 'segment-hit', priority: 3 });
+        }
+        return ranges;
+      }
+      const needle = String(matcher || '');
+      if (!needle) return ranges;
+      const lower = source.toLowerCase();
+      let from = 0;
+      while (true) {
+        const index = lower.indexOf(needle, from);
+        if (index === -1) break;
+        ranges.push({ start: index, end: index + needle.length, className: 'segment-hit', priority: 3 });
+        from = index + needle.length;
+      }
+      return ranges;
+    }
+
+    function buildDecorRanges(text, levelClass) {
+      const source = String(text || '');
+      const ranges = [];
+      const timestampMatch = source.match(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d{3,6})?(?:Z|[+-]\d{2}:?\d{2})?/);
+      if (timestampMatch) {
+        ranges.push({ start: 0, end: timestampMatch[0].length, className: 'log-ts', priority: 1 });
+      }
+
+      const bracketRe = /\[[^\]]+\]/g;
+      for (let match; (match = bracketRe.exec(source)); ) {
+        if (!match[0]) break;
+        ranges.push({ start: match.index, end: match.index + match[0].length, className: 'log-bracket', priority: 1 });
+      }
+
+      if (levelClass === 'warn' || levelClass === 'error' || levelClass === 'fatal') {
+        const levelRe = /\b(WARN|ERROR|FATAL)\b/;
+        const levelMatch = source.match(levelRe);
+        if (levelMatch && typeof levelMatch.index === 'number') {
+          ranges.push({
+            start: levelMatch.index,
+            end: levelMatch.index + levelMatch[0].length,
+            className: `log-level-mark ${levelClass}`,
+            priority: 2
+          });
+        }
+      }
+
+      return ranges;
+    }
+
+    function renderTextWithHighlights(text, matcher, levelClass = '') {
+      const source = String(text || '');
+      if (!source) return '';
+      const ranges = [...buildDecorRanges(source, levelClass), ...buildRanges(source, matcher)]
+        .sort((a, b) => a.start - b.start || b.priority - a.priority || (b.end - b.start) - (a.end - a.start));
+      let html = '';
+      let index = 0;
+      for (const range of ranges) {
+        if (range.start < index) continue;
+        html += escapeHtml(source.slice(index, range.start));
+        html += '<span class="' + range.className + '">' + escapeHtml(source.slice(range.start, range.end)) + '</span>';
+        index = range.end;
+      }
+      html += escapeHtml(source.slice(index));
+      return html;
+    }
+
+    function renderEntriesHtml(entries, matcher) {
+      let html = '';
+      for (const entry of entries) {
+        const levelClass = String(entry.level || '').toLowerCase();
+        const className = levelClass ? `log-line ${levelClass}` : 'log-line';
+        for (const rawLine of entry.raw) {
+          const lineHtml = renderTextWithHighlights(rawLine, matcher, levelClass);
+          html += `<span class="${className}">${lineHtml}</span>`;
+        }
+      }
+      return html;
+    }
+
+    async function renderLogText() {
+      const count = state.filteredIndexes.length;
+      els.logScroll.classList.toggle('nowrap', !state.wrap);
+      if (!count) {
+        els.logTextView.className = 'empty';
+        els.logTextView.textContent = 'No log text matches the current filters.';
+        return;
+      }
+      const searchMatcher = state.regexSearch
+        ? safeRegex(state.searchText)
+        : (state.searchText || '').trim().toLowerCase();
+      els.logTextView.className = 'log-text';
+      setProgress(0.98, true);
+      await nextFrame();
+      const visibleEntries = state.filteredIndexes.map(index => state.entries[index]);
+      els.logTextView.innerHTML = renderEntriesHtml(visibleEntries, searchMatcher);
+    }
+
+    async function applyFilters() {
+      clearTimeout(state.filterTimer);
+      state.filterTimer = null;
+      const token = ++state.filterToken;
+      setStatus('Filtering log...', '');
+      const textMatcher = state.regexSearch
+        ? safeRegex(state.searchText)
+        : (state.searchText || '').trim().toLowerCase();
+      const threadNeedle = state.threadFilter.trim().toLowerCase();
+      const loggerNeedle = state.loggerFilter.trim().toLowerCase();
+      const traceNeedle = state.traceFilter.trim().toLowerCase();
+      const timeFromMs = dateTimeLocalToMs(state.timeFrom);
+      const timeToMs = dateTimeLocalToMs(state.timeTo);
+
+      const filtered = [];
+      const total = state.entries.length || 1;
+      setProgress(0.02, true);
+      for (let i = 0; i < state.entries.length; i++) {
+        if (token !== state.filterToken) {
+          finishProgress();
+          return;
+        }
+        const entry = state.entries[i];
+        if (!isLevelEnabled(entry.level)) continue;
+        if (threadNeedle && !String(entry.thread || '').toLowerCase().includes(threadNeedle)) continue;
+        if (loggerNeedle && !String(entry.logger || '').toLowerCase().includes(loggerNeedle)) continue;
+        if (traceNeedle && !String(entry.traceId || '').toLowerCase().includes(traceNeedle)) continue;
+        if (timeFromMs !== null && (entry.timestampMs === null || entry.timestampMs < timeFromMs)) continue;
+        if (timeToMs !== null && (entry.timestampMs === null || entry.timestampMs > timeToMs)) continue;
+        if (state.regexSearch && state.searchText && !textMatcher) continue;
+        if (!matchesSearch(entry, textMatcher)) continue;
+        filtered.push(i);
+        if ((i + 1) % FILTER_CHUNK_SIZE === 0) {
+          setProgress(0.02 + 0.96 * ((i + 1) / total), true);
+          await nextFrame();
+        }
+      }
+      if (token !== state.filterToken) {
+        finishProgress();
+        return;
+      }
+      state.filteredIndexes = filtered;
+      updateStats();
+      await renderLogText();
+      updateButtons();
+      scheduleSave();
+      finishProgress();
+      setStatus('', '');
+    }
+
+    function updateMeta() {
+      if (state.fileName) {
+        els.headerMeta.textContent = `${state.fileName} | ${(state.fileSize / 1024).toFixed(1)} KB`;
+      } else if (state.rawText.trim()) {
+        els.headerMeta.textContent = `In memory | ${(new Blob([state.rawText]).size / 1024).toFixed(1)} KB`;
+      } else {
+        els.headerMeta.textContent = '';
+      }
+      syncHeaderSpacer();
+    }
+
+    function updateButtons() {
+      const hasVisible = state.filteredIndexes.length > 0;
+      els.copyBtn.disabled = !hasVisible;
+      els.downloadBtn.disabled = !hasVisible;
+      els.wrapBtn.classList.toggle('active', state.wrap);
+      els.regexBtn.classList.toggle('active', state.regexSearch);
+      els.searchToggleBtn.classList.toggle('active', !state.searchCollapsed);
+      els.filtersToggleBtn.classList.toggle('active', !state.filtersCollapsed);
+      els.searchToggleBtn.setAttribute('aria-expanded', String(!state.searchCollapsed));
+      els.filtersToggleBtn.setAttribute('aria-expanded', String(!state.filtersCollapsed));
+      els.searchDrawer.hidden = state.searchCollapsed;
+      els.filtersDrawer.hidden = state.filtersCollapsed;
+      const activeFilters = [
+        state.searchText ? 'search' : '',
+        state.regexSearch ? 'regex' : '',
+        !state.wrap ? 'nowrap' : '',
+        state.threadFilter ? 'thread' : '',
+        state.loggerFilter ? 'logger' : '',
+        state.traceFilter ? 'trace' : '',
+        state.timeFrom || state.timeTo ? 'time' : '',
+        LEVELS.some(level => !state.levelEnabled[level]) ? 'levels' : ''
+      ].filter(Boolean);
+      els.compactMeta.textContent = `Format: ${state.formatMode}${activeFilters.length ? ' • ' + activeFilters.join(', ') : ''}`;
+      syncHeaderSpacer();
+    }
+
+    function updateStats() {
+      if (!state.entries.length) {
+        els.warnCount.textContent = 'Warn: 0';
+        els.errorCount.textContent = 'Error: 0';
+        return;
+      }
+      const visible = state.filteredIndexes.map(index => state.entries[index]);
+      const counts = { WARN: 0, ERROR: 0, FATAL: 0 };
+      for (const entry of visible) {
+        if (counts[entry.level] !== undefined) counts[entry.level] += 1;
+      }
+      els.warnCount.textContent = 'Warn: ' + counts.WARN.toLocaleString();
+      els.errorCount.textContent = 'Error: ' + (counts.ERROR + counts.FATAL).toLocaleString();
+    }
+
+    async function parseCurrentText(reason = 'Parsing log...') {
+      const text = state.rawText;
+      state.rawText = text;
+      updateMeta();
+      if (!text.trim()) {
+        state.entries = [];
+        state.filteredIndexes = [];
+        updateStats();
+        await renderLogText();
+        updateButtons();
+        setStatus('Empty', '');
+        scheduleSave();
+        return;
+      }
+
+      beginParsing(reason);
+      try {
+        const result = await parseLogs(text, state.formatMode);
+        state.entries = result.entries || [];
+        state.counts = result.counts || null;
+        setStatus('', '');
+        await applyFilters();
+      } catch (err) {
+        state.entries = [];
+        state.filteredIndexes = [];
+        updateStats();
+        await renderLogText();
+        setStatus('Parse error: ' + err.message, 'error');
+      } finally {
+        finishParsing();
+        updateMeta();
+        scheduleSave();
+      }
+    }
+
+    function serializeFilteredEntries() {
+      return state.filteredIndexes.map(index => state.entries[index].raw.join('\n')).join('\n');
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) return;
+        state.rawText = text;
+        state.fileName = '';
+        state.fileSize = new Blob([text]).size;
+        await parseCurrentText('Pasting and parsing log...');
+      } catch {
+        setStatus('Could not read clipboard', 'error');
+      }
+    }
+
+    function loadFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      state.fileToken += 1;
+      const token = state.fileToken;
+      beginParsing(`Reading ${file.name}...`);
+      reader.onprogress = event => {
+        if (token !== state.fileToken) return;
+        if (event.lengthComputable) {
+          setProgress(0.04 + 0.36 * (event.loaded / event.total), true);
+        }
+      };
+      reader.onerror = () => {
+        finishParsing();
+        setStatus('Could not read file', 'error');
+      };
+      reader.onload = async () => {
+        if (token !== state.fileToken) return;
+        const text = typeof reader.result === 'string' ? reader.result : '';
+        state.rawText = text;
+        state.fileName = file.name;
+        state.fileSize = file.size;
+        updateMeta();
+        await parseCurrentText(`Parsing ${file.name}...`);
+      };
+      reader.readAsText(file);
+    }
+
+    async function copyFiltered() {
+      const text = serializeFilteredEntries();
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('Filtered log copied', 'ok');
+      } catch {
+        setStatus('Could not copy filtered log', 'error');
+      }
+    }
+
+    function downloadFiltered() {
+      const text = serializeFilteredEntries();
+      if (!text) return;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = state.fileName ? state.fileName.replace(/\.[^.]+$/, '') + '.filtered.log' : 'filtered.log';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearAll() {
+      state.rawText = '';
+      state.fileName = '';
+      state.fileSize = 0;
+      state.entries = [];
+      state.filteredIndexes = [];
+      state.counts = null;
+      updateMeta();
+      updateStats();
+      void renderLogText();
+      updateButtons();
+      setStatus('Empty', '');
+      scheduleSave();
+    }
+
+    function initLevelButtons() {
+      els.levelGroup.innerHTML = LEVELS.map(level => '<button class="level-btn" type="button" data-level="' + level + '">' + level + '</button>').join('');
+      for (const button of els.levelGroup.querySelectorAll('.level-btn')) {
+        const level = button.dataset.level;
+        button.classList.toggle('active', state.levelEnabled[level]);
+      }
+    }
+
+    function syncControlsFromState() {
+      els.formatMode.value = state.formatMode;
+      els.searchInput.value = state.searchText;
+      els.threadFilter.value = state.threadFilter;
+      els.loggerFilter.value = state.loggerFilter;
+      els.traceFilter.value = state.traceFilter;
+      els.timeFrom.value = state.timeFrom;
+      els.timeTo.value = state.timeTo;
+      updateButtons();
+      initLevelButtons();
+    }
+
+    function toggleDrawer(name) {
+      if (name === 'search') state.searchCollapsed = !state.searchCollapsed;
+      if (name === 'filters') state.filtersCollapsed = !state.filtersCollapsed;
+      updateButtons();
+      scheduleSave();
+    }
+
+    els.loadBtn.addEventListener('click', () => els.fileInput.click());
+    els.fileInput.addEventListener('change', event => loadFile(event.target.files?.[0]));
+    els.pasteBtn.addEventListener('click', () => { void pasteFromClipboard(); });
+    els.parseBtn.addEventListener('click', () => { void parseCurrentText(); });
+    els.copyBtn.addEventListener('click', () => { void copyFiltered(); });
+    els.downloadBtn.addEventListener('click', downloadFiltered);
+    els.clearBtn.addEventListener('click', clearAll);
+    els.searchToggleBtn.addEventListener('click', () => toggleDrawer('search'));
+    els.filtersToggleBtn.addEventListener('click', () => toggleDrawer('filters'));
+    els.clearSearchBtn.addEventListener('click', () => {
+      state.searchText = '';
+      els.searchInput.value = '';
+      scheduleFilterApply(0);
+    });
+    els.runParseBtn.addEventListener('click', () => { void parseCurrentText(); });
+    els.regexBtn.addEventListener('click', () => {
+      state.regexSearch = !state.regexSearch;
+      updateButtons();
+      scheduleFilterApply();
+    });
+    els.wrapBtn.addEventListener('click', () => {
+      state.wrap = !state.wrap;
+      updateButtons();
+      void renderLogText();
+      scheduleSave();
+    });
+
+    els.formatMode.addEventListener('change', () => {
+      state.formatMode = els.formatMode.value;
+      void parseCurrentText('Re-parsing log...');
+    });
+    els.searchInput.addEventListener('input', () => {
+      state.searchText = els.searchInput.value;
+      scheduleFilterApply();
+    });
+    els.threadFilter.addEventListener('change', () => {
+      state.threadFilter = els.threadFilter.value;
+      scheduleFilterApply();
+    });
+    els.threadFilter.addEventListener('blur', () => {
+      state.threadFilter = els.threadFilter.value;
+      scheduleFilterApply();
+    });
+    els.loggerFilter.addEventListener('input', () => {
+      state.loggerFilter = els.loggerFilter.value;
+      scheduleFilterApply();
+    });
+    els.loggerFilter.addEventListener('change', () => {
+      state.loggerFilter = els.loggerFilter.value;
+      scheduleFilterApply();
+    });
+    els.loggerFilter.addEventListener('blur', () => {
+      state.loggerFilter = els.loggerFilter.value;
+      scheduleFilterApply();
+    });
+    els.traceFilter.addEventListener('input', () => {
+      state.traceFilter = els.traceFilter.value;
+      scheduleFilterApply();
+    });
+    els.traceFilter.addEventListener('change', () => {
+      state.traceFilter = els.traceFilter.value;
+      scheduleFilterApply();
+    });
+    els.traceFilter.addEventListener('blur', () => {
+      state.traceFilter = els.traceFilter.value;
+      scheduleFilterApply();
+    });
+    els.timeFrom.addEventListener('change', () => {
+      state.timeFrom = els.timeFrom.value;
+      scheduleFilterApply();
+    });
+    els.timeTo.addEventListener('change', () => {
+      state.timeTo = els.timeTo.value;
+      scheduleFilterApply();
+    });
+
+    els.levelGroup.addEventListener('click', event => {
+      const button = event.target.closest('.level-btn[data-level]');
+      if (!button) return;
+      const level = button.dataset.level;
+      state.levelEnabled[level] = !state.levelEnabled[level];
+      button.classList.toggle('active', state.levelEnabled[level]);
+      scheduleFilterApply();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      saveStateNow();
+      if (state.worker) state.worker.terminate();
+      if (state.workerUrl) URL.revokeObjectURL(state.workerUrl);
+    });
+    window.addEventListener('resize', syncHeaderSpacer);
+
+    restoreState();
+    syncControlsFromState();
+    updateMeta();
+    updateStats();
+    void renderLogText();
+    syncHeaderSpacer();
+    if (state.rawText.trim()) {
+      void parseCurrentText('Restoring log from localStorage...');
+    } else {
+      updateButtons();
+    }
+  </script>
+</body>
+</html>
