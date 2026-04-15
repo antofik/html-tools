@@ -82,6 +82,7 @@
     .search-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
     .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; align-items: center; }
     .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; white-space: nowrap; }
+    :root { --log-row-height: 20px; }
     .log-scroll { overflow: visible; background: #fff; font-family: var(--mono); font-size: 13px; line-height: 1.45; width: max-content; min-width: 100%; }
     .log-text { margin: 0; padding: 12px 14px; color: #111827; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; tab-size: 2; width: max-content; min-width: 100%; }
     .log-scroll.nowrap .log-text { white-space: pre; word-break: normal; overflow-wrap: normal; display: block; }
@@ -96,6 +97,12 @@
     .log-preview-line { display: block; padding-left: 18px; color: #6b7280; background: rgba(148, 163, 184, 0.06); }
     .log-preview-line .log-line-inner { min-width: auto; }
     .log-preview-text { min-width: 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+    .log-scroll.nowrap .log-line,
+    .log-scroll.nowrap .log-preview-line { height: var(--log-row-height); line-height: var(--log-row-height); overflow: hidden; }
+    .log-scroll.nowrap .log-line-inner { height: 100%; line-height: var(--log-row-height); }
+    .log-scroll.nowrap .log-line-text,
+    .log-scroll.nowrap .log-preview-text { white-space: pre; word-break: normal; overflow-wrap: normal; line-height: var(--log-row-height); }
+    .virtual-spacer { display: block; height: 0; }
     .detail-btn { width: 20px; height: 20px; min-width: 20px; padding: 0; border: none; background: transparent; color: #64748b; cursor: pointer; vertical-align: middle; border-radius: 6px; }
     .detail-btn:hover { background: #f3f4f6; }
     .stacktrace-btn::before { content: "💥"; font-size: 13px; line-height: 1; font-weight: 700; color: #b91c1c; }
@@ -213,7 +220,7 @@
         <div class="panel-body">
           <div id="resultViewer" class="viewer">
             <div id="progressBar" class="progress-bar"></div>
-            <div id="logScroll" class="log-scroll"><pre id="logTextView" class="log-text"></pre></div>
+            <div id="logScroll" class="log-scroll"><div id="logTextView" class="log-text"></div></div>
           </div>
         </div>
       </div>
@@ -427,6 +434,12 @@
       timeTo: '',
       entries: [],
       filteredIndexes: [],
+      renderRows: [],
+      renderMatcher: '',
+      renderWidthCh: 0,
+      visibleRowStart: -1,
+      visibleRowEnd: -1,
+      scrollRenderRaf: 0,
       counts: null,
       fileToken: 0,
       filterToken: 0,
@@ -789,24 +802,113 @@
       return lines.map(renderStacktraceLine).join('');
     }
 
-    function renderEntriesHtml(entries, matcher) {
-      let html = '';
-      for (let entryOffset = 0; entryOffset < entries.length; entryOffset++) {
-        const entry = entries[entryOffset];
-        const levelClass = String(entry.level || '').toLowerCase();
-        const className = levelClass ? `log-line ${levelClass}` : 'log-line';
-        const lineHtml = renderTextWithHighlights(entry.raw[0] || '', matcher, levelClass);
-        const stacktrace = isStacktraceEntry(entry);
-        const detailButtonHtml = entry.continuation.length
-          ? `<button class="detail-btn ${stacktrace ? 'stacktrace-btn' : 'multiline-btn'}" type="button" data-entry-index="${entry.index}" aria-label="${stacktrace ? 'Open stack trace' : 'Open multiline log'}"></button>`
-          : '';
-        html += `<span class="${className}"><span class="log-line-inner"><span class="log-line-text">${lineHtml}</span></span></span>`;
+    function getLogRowHeight() {
+      const value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--log-row-height'));
+      return Number.isFinite(value) && value > 0 ? value : 20;
+    }
+
+    function buildRenderRows(matcher) {
+      const rows = [];
+      let widthCh = 0;
+      for (let i = 0; i < state.filteredIndexes.length; i++) {
+        const entryIndex = state.filteredIndexes[i];
+        const entry = state.entries[entryIndex];
+        if (!entry) continue;
+        const mainText = String(entry.raw[0] || '');
+        rows.push({
+          type: 'main',
+          entryIndex,
+          levelClass: String(entry.level || '').toLowerCase(),
+          text: mainText
+        });
+        widthCh = Math.max(widthCh, mainText.length);
         if (entry.continuation.length) {
-          const previewHtml = renderTextWithHighlights(entry.continuation[0], matcher, '');
-          html += `<span class="log-preview-line"><span class="log-line-inner">${detailButtonHtml}<span class="log-preview-text">${previewHtml}</span></span></span>`;
+          const previewText = String(entry.continuation[0] || '');
+          rows.push({
+            type: 'preview',
+            entryIndex,
+            stacktrace: isStacktraceEntry(entry),
+            text: previewText
+          });
+          widthCh = Math.max(widthCh, previewText.length + 4);
         }
       }
-      return html;
+      state.renderRows = rows;
+      state.renderMatcher = matcher;
+      state.renderWidthCh = Math.max(0, widthCh);
+      state.visibleRowStart = -1;
+      state.visibleRowEnd = -1;
+    }
+
+    function renderRowHtml(row, matcher) {
+      const entry = state.entries[row.entryIndex];
+      if (!entry) return '';
+      if (row.type === 'preview') {
+        const previewHtml = renderTextWithHighlights(row.text, matcher, '');
+        const detailButtonHtml = `<button class="detail-btn ${row.stacktrace ? 'stacktrace-btn' : 'multiline-btn'}" type="button" data-entry-index="${row.entryIndex}" aria-label="${row.stacktrace ? 'Open stack trace' : 'Open multiline log'}"></button>`;
+        return `<span class="log-preview-line"><span class="log-line-inner">${detailButtonHtml}<span class="log-preview-text">${previewHtml}</span></span></span>`;
+      }
+      const className = row.levelClass ? `log-line ${row.levelClass}` : 'log-line';
+      const lineHtml = renderTextWithHighlights(row.text, matcher, row.levelClass);
+      return `<span class="${className}"><span class="log-line-inner"><span class="log-line-text">${lineHtml}</span></span></span>`;
+    }
+
+    function updateLogSurfaceWidth() {
+      els.logTextView.style.minWidth = '100%';
+      if (state.wrap || !state.renderWidthCh) {
+        els.logTextView.style.width = '';
+        return;
+      }
+      els.logTextView.style.width = `${state.renderWidthCh + 2}ch`;
+    }
+
+    function renderVisibleRows(force = false) {
+      const totalRows = state.renderRows.length;
+      if (!totalRows) {
+        els.logTextView.className = 'empty';
+        els.logTextView.style.width = '';
+        els.logTextView.style.minWidth = '';
+        els.logTextView.textContent = 'No log text matches the current filters.';
+        return;
+      }
+
+      els.logTextView.className = 'log-text';
+      updateLogSurfaceWidth();
+
+      if (state.wrap) {
+        if (!force && state.visibleRowStart === 0 && state.visibleRowEnd === totalRows) return;
+        state.visibleRowStart = 0;
+        state.visibleRowEnd = totalRows;
+        els.logTextView.innerHTML = state.renderRows.map(row => renderRowHtml(row, state.renderMatcher)).join('');
+        return;
+      }
+
+      const rowHeight = getLogRowHeight();
+      const containerTop = els.logTextView.getBoundingClientRect().top + window.scrollY;
+      const viewportTop = Math.max(0, window.scrollY - containerTop);
+      const viewportBottom = Math.max(0, window.scrollY + window.innerHeight - containerTop);
+      const overscan = 80;
+      const start = Math.max(0, Math.floor(viewportTop / rowHeight) - overscan);
+      const end = Math.min(totalRows, Math.ceil(viewportBottom / rowHeight) + overscan);
+      if (!force && start === state.visibleRowStart && end === state.visibleRowEnd) return;
+      state.visibleRowStart = start;
+      state.visibleRowEnd = end;
+
+      const topHeight = start * rowHeight;
+      const bottomHeight = Math.max(0, (totalRows - end) * rowHeight);
+      const visibleHtml = state.renderRows.slice(start, end).map(row => renderRowHtml(row, state.renderMatcher)).join('');
+      els.logTextView.innerHTML =
+        `<span class="virtual-spacer" style="height:${topHeight}px"></span>` +
+        visibleHtml +
+        `<span class="virtual-spacer" style="height:${bottomHeight}px"></span>`;
+    }
+
+    function scheduleVisibleRowRender(force = false) {
+      if (state.scrollRenderRaf) cancelAnimationFrame(state.scrollRenderRaf);
+      state.scrollRenderRaf = requestAnimationFrame(() => {
+        state.scrollRenderRaf = 0;
+        renderVisibleRows(force);
+      });
     }
 
     function openStacktraceModal(entryIndex) {
@@ -847,18 +949,23 @@
       const count = state.filteredIndexes.length;
       els.logScroll.classList.toggle('nowrap', !state.wrap);
       if (!count) {
+        state.renderRows = [];
+        state.renderWidthCh = 0;
+        state.visibleRowStart = -1;
+        state.visibleRowEnd = -1;
         els.logTextView.className = 'empty';
+        els.logTextView.style.width = '';
+        els.logTextView.style.minWidth = '';
         els.logTextView.textContent = 'No log text matches the current filters.';
         return;
       }
       const searchMatcher = state.regexSearch
         ? safeRegex(state.searchText)
         : (state.searchText || '').trim().toLowerCase();
-      els.logTextView.className = 'log-text';
       setProgress(0.98, true);
       await nextFrame();
-      const visibleEntries = state.filteredIndexes.map(index => state.entries[index]);
-      els.logTextView.innerHTML = renderEntriesHtml(visibleEntries, searchMatcher);
+      buildRenderRows(searchMatcher);
+      renderVisibleRows(true);
     }
 
     async function applyFilters() {
@@ -1236,10 +1343,15 @@
 
     window.addEventListener('beforeunload', () => {
       saveStateNow();
+      if (state.scrollRenderRaf) cancelAnimationFrame(state.scrollRenderRaf);
       if (state.worker) state.worker.terminate();
       if (state.workerUrl) URL.revokeObjectURL(state.workerUrl);
     });
-    window.addEventListener('resize', syncHeaderSpacer);
+    window.addEventListener('scroll', () => scheduleVisibleRowRender(), { passive: true });
+    window.addEventListener('resize', () => {
+      syncHeaderSpacer();
+      scheduleVisibleRowRender(true);
+    });
 
     restoreState();
     syncControlsFromState();
