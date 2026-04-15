@@ -210,15 +210,6 @@
                       <button id="clearSearchBtn" class="compact-btn secondary" type="button">Clear search</button>
                     </div>
                   </div>
-                  <div class="help-inline">
-                    <span class="search-chip"><strong>Include</strong> any matching line</span>
-                    <span class="search-chip"><strong>Exclude</strong> any matching line</span>
-                    <span class="search-chip regex">Regex optional</span>
-                    <span class="help-wrap">
-                      <button class="help-btn" type="button" aria-label="Filter help">?</button>
-                      <span class="help-tooltip">Each line in Include or Exclude is treated as a separate pattern. Include keeps entries matching any line. Exclude removes entries matching any line. Regex mode applies to those lines.</span>
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -552,6 +543,10 @@
 
     function scheduleFilterApply(delayMs = FILTER_DEBOUNCE_MS) {
       clearTimeout(state.filterTimer);
+      if (hasActiveFilters()) {
+        setStatus('Filtering log...', '');
+        setProgress(0.01, true);
+      }
       state.filterTimer = setTimeout(() => {
         state.filterTimer = null;
         void applyFilters();
@@ -1029,6 +1024,7 @@
       const filtered = [];
       const total = state.entries.length || 1;
       setProgress(0.02, true);
+      await nextFrame();
       for (let i = 0; i < state.entries.length; i++) {
         if (token !== state.filterToken) {
           finishProgress();
@@ -1269,8 +1265,14 @@
     els.clearSearchBtn.addEventListener('click', () => {
       state.includePatternsText = '';
       state.excludePatternsText = '';
+      state.regexSearch = false;
+      for (const level of LEVELS) {
+        state.levelEnabled[level] = true;
+      }
       els.includePatterns.value = '';
       els.excludePatterns.value = '';
+      initLevelButtons();
+      updateButtons();
       scheduleFilterApply(0);
     });
     els.regexBtn.addEventListener('click', () => {
