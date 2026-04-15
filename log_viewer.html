@@ -86,8 +86,7 @@
     .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; white-space: nowrap; }
     :root { --log-row-height: 20px; }
     .log-scroll { overflow: visible; background: #fff; font-family: var(--mono); font-size: 13px; line-height: 1.45; width: max-content; min-width: 100%; }
-    .log-text { margin: 0; padding: 12px 14px; color: #111827; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; tab-size: 2; width: max-content; min-width: 100%; }
-    .log-scroll.nowrap .log-text { white-space: pre; word-break: normal; overflow-wrap: normal; display: block; }
+    .log-text { margin: 0; padding: 12px 14px; color: #111827; white-space: pre; word-break: normal; overflow-wrap: normal; tab-size: 2; width: max-content; min-width: 100%; display: block; }
     .log-line { display: block; color: #111827; }
     .log-line.trace { color: #6b7280; }
     .log-line.debug { color: #4b5563; }
@@ -98,12 +97,11 @@
     .log-line-text { min-width: 0; }
     .log-preview-line { display: block; padding-left: 18px; color: #6b7280; background: rgba(148, 163, 184, 0.06); }
     .log-preview-line .log-line-inner { min-width: auto; }
-    .log-preview-text { min-width: 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
-    .log-scroll.nowrap .log-line,
-    .log-scroll.nowrap .log-preview-line { height: var(--log-row-height); line-height: var(--log-row-height); overflow: hidden; }
-    .log-scroll.nowrap .log-line-inner { height: 100%; line-height: var(--log-row-height); }
-    .log-scroll.nowrap .log-line-text,
-    .log-scroll.nowrap .log-preview-text { white-space: pre; word-break: normal; overflow-wrap: normal; line-height: var(--log-row-height); }
+    .log-preview-text { min-width: 0; white-space: pre; word-break: normal; overflow-wrap: normal; line-height: var(--log-row-height); }
+    .log-line,
+    .log-preview-line { height: var(--log-row-height); line-height: var(--log-row-height); overflow: hidden; }
+    .log-line-inner { height: 100%; line-height: var(--log-row-height); }
+    .log-line-text { line-height: var(--log-row-height); }
     .virtual-spacer { display: block; height: 0; }
     .detail-btn { width: 20px; height: 20px; min-width: 20px; padding: 0; border: none; background: transparent; color: #64748b; cursor: pointer; vertical-align: middle; border-radius: 6px; }
     .detail-btn:hover { background: #f3f4f6; }
@@ -169,7 +167,6 @@
             <div id="warnCount" class="count-badge warn">Warn: 0</div>
             <div id="errorCount" class="count-badge error">Error: 0</div>
             <button id="regexBtn" class="toggle-btn" type="button">Regex</button>
-            <button id="wrapBtn" class="toggle-btn active" type="button">Wrap</button>
           </div>
         </div>
         <div id="searchDrawer" class="top-drawer" hidden>
@@ -433,7 +430,6 @@
       includePatternsText: '',
       excludePatternsText: '',
       regexSearch: false,
-      wrap: true,
       searchCollapsed: true,
       filtersCollapsed: true,
       levelEnabled: Object.fromEntries(LEVELS.map(level => [level, true])),
@@ -450,6 +446,7 @@
       visibleRowStart: -1,
       visibleRowEnd: -1,
       scrollRenderRaf: 0,
+      persistedRawText: false,
       counts: null,
       fileToken: 0,
       filterToken: 0,
@@ -479,7 +476,6 @@
       includePatterns: document.getElementById('includePatterns'),
       excludePatterns: document.getElementById('excludePatterns'),
       regexBtn: document.getElementById('regexBtn'),
-      wrapBtn: document.getElementById('wrapBtn'),
       levelGroup: document.getElementById('levelGroup'),
       threadFilter: document.getElementById('threadFilter'),
       loggerFilter: document.getElementById('loggerFilter'),
@@ -568,14 +564,12 @@
 
     function saveStateNow() {
       const payload = {
-        rawText: state.rawText,
         fileName: state.fileName,
         fileSize: state.fileSize,
         formatMode: state.formatMode,
         includePatternsText: state.includePatternsText,
         excludePatternsText: state.excludePatternsText,
         regexSearch: state.regexSearch,
-        wrap: state.wrap,
         searchCollapsed: state.searchCollapsed,
         filtersCollapsed: state.filtersCollapsed,
         levelEnabled: state.levelEnabled,
@@ -585,6 +579,9 @@
         timeFrom: state.timeFrom,
         timeTo: state.timeTo
       };
+      if (state.persistedRawText && state.rawText) {
+        payload.rawText = state.rawText;
+      }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       } catch {}
@@ -597,6 +594,7 @@
         const saved = JSON.parse(raw);
         if (typeof saved.rawText === 'string') {
           state.rawText = saved.rawText;
+          state.persistedRawText = true;
         }
         if (typeof saved.fileName === 'string') state.fileName = saved.fileName;
         if (typeof saved.fileSize === 'number') state.fileSize = saved.fileSize;
@@ -608,7 +606,6 @@
         }
         if (typeof saved.excludePatternsText === 'string') state.excludePatternsText = saved.excludePatternsText;
         if (typeof saved.regexSearch === 'boolean') state.regexSearch = saved.regexSearch;
-        if (typeof saved.wrap === 'boolean') state.wrap = saved.wrap;
         if (typeof saved.searchCollapsed === 'boolean') state.searchCollapsed = saved.searchCollapsed;
         if (typeof saved.filtersCollapsed === 'boolean') state.filtersCollapsed = saved.filtersCollapsed;
         if (saved.levelEnabled && typeof saved.levelEnabled === 'object') {
@@ -861,8 +858,7 @@
         rows.push({
           type: 'main',
           entryIndex,
-          levelClass: String(entry.level || '').toLowerCase(),
-          text: mainText
+          preview: false
         });
         widthCh = Math.max(widthCh, mainText.length);
         if (entry.continuation.length) {
@@ -870,8 +866,8 @@
           rows.push({
             type: 'preview',
             entryIndex,
-            stacktrace: isStacktraceEntry(entry),
-            text: previewText
+            preview: true,
+            stacktrace: isStacktraceEntry(entry)
           });
           widthCh = Math.max(widthCh, previewText.length + 4);
         }
@@ -887,18 +883,19 @@
       const entry = state.entries[row.entryIndex];
       if (!entry) return '';
       if (row.type === 'preview') {
-        const previewHtml = renderTextWithHighlights(row.text, matcher, '');
+        const previewHtml = renderTextWithHighlights(entry.continuation[0] || '', matcher, '');
         const detailButtonHtml = `<button class="detail-btn ${row.stacktrace ? 'stacktrace-btn' : 'multiline-btn'}" type="button" data-entry-index="${row.entryIndex}" aria-label="${row.stacktrace ? 'Open stack trace' : 'Open multiline log'}"></button>`;
         return `<span class="log-preview-line"><span class="log-line-inner">${detailButtonHtml}<span class="log-preview-text">${previewHtml}</span></span></span>`;
       }
-      const className = row.levelClass ? `log-line ${row.levelClass}` : 'log-line';
-      const lineHtml = renderTextWithHighlights(row.text, matcher, row.levelClass);
+      const levelClass = String(entry.level || '').toLowerCase();
+      const className = levelClass ? `log-line ${levelClass}` : 'log-line';
+      const lineHtml = renderTextWithHighlights(entry.raw[0] || '', matcher, levelClass);
       return `<span class="${className}"><span class="log-line-inner"><span class="log-line-text">${lineHtml}</span></span></span>`;
     }
 
     function updateLogSurfaceWidth() {
       els.logTextView.style.minWidth = '100%';
-      if (state.wrap || !state.renderWidthCh) {
+      if (!state.renderWidthCh) {
         els.logTextView.style.width = '';
         return;
       }
@@ -917,14 +914,6 @@
 
       els.logTextView.className = 'log-text';
       updateLogSurfaceWidth();
-
-      if (state.wrap) {
-        if (!force && state.visibleRowStart === 0 && state.visibleRowEnd === totalRows) return;
-        state.visibleRowStart = 0;
-        state.visibleRowEnd = totalRows;
-        els.logTextView.innerHTML = state.renderRows.map(row => renderRowHtml(row, state.renderMatcher)).join('');
-        return;
-      }
 
       const rowHeight = getLogRowHeight();
       const containerTop = els.logTextView.getBoundingClientRect().top + window.scrollY;
@@ -990,7 +979,6 @@
 
     async function renderLogText() {
       const count = state.filteredIndexes.length;
-      els.logScroll.classList.toggle('nowrap', !state.wrap);
       if (!count) {
         state.renderRows = [];
         state.renderWidthCh = 0;
@@ -1093,7 +1081,6 @@
       const hasVisible = state.filteredIndexes.length > 0;
       els.copyBtn.disabled = !hasVisible;
       els.downloadBtn.disabled = !hasVisible;
-      els.wrapBtn.classList.toggle('active', state.wrap);
       els.regexBtn.classList.toggle('active', state.regexSearch);
       els.searchToggleBtn.classList.toggle('active', !state.searchCollapsed);
       els.filtersToggleBtn.classList.toggle('active', !state.filtersCollapsed);
@@ -1105,7 +1092,6 @@
         parsePatternLines(state.includePatternsText).length ? 'include' : '',
         parsePatternLines(state.excludePatternsText).length ? 'exclude' : '',
         state.regexSearch ? 'regex' : '',
-        !state.wrap ? 'nowrap' : '',
         state.threadFilter ? 'thread' : '',
         state.loggerFilter ? 'logger' : '',
         state.traceFilter ? 'trace' : '',
@@ -1175,6 +1161,7 @@
         const text = await navigator.clipboard.readText();
         if (!text) return;
         state.rawText = text;
+        state.persistedRawText = false;
         state.fileName = '';
         state.fileSize = new Blob([text]).size;
         await parseCurrentText('Pasting and parsing log...');
@@ -1203,6 +1190,7 @@
         if (token !== state.fileToken) return;
         const text = typeof reader.result === 'string' ? reader.result : '';
         state.rawText = text;
+        state.persistedRawText = false;
         state.fileName = file.name;
         state.fileSize = file.size;
         updateMeta();
@@ -1238,6 +1226,7 @@
 
     function clearAll() {
       state.rawText = '';
+      state.persistedRawText = false;
       state.fileName = '';
       state.fileSize = 0;
       state.entries = [];
@@ -1304,12 +1293,6 @@
       state.regexSearch = !state.regexSearch;
       updateButtons();
       scheduleFilterApply();
-    });
-    els.wrapBtn.addEventListener('click', () => {
-      state.wrap = !state.wrap;
-      updateButtons();
-      void renderLogText();
-      scheduleSave();
     });
 
     els.formatMode.addEventListener('change', () => {
