@@ -79,7 +79,8 @@
     .count-badge.error { color: var(--error); background: #fef2f2; border-color: #fecaca; }
     .top-drawer { border-bottom: 1px solid var(--border); background: #fff; }
     .top-drawer[hidden] { display: none; }
-    .search-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+    .search-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: start; }
+    .search-patterns { min-height: 68px; resize: vertical; }
     .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; align-items: center; }
     .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; white-space: nowrap; }
     :root { --log-row-height: 20px; }
@@ -110,6 +111,7 @@
     .log-ts { color: #9ca3af; }
     .log-bracket { color: #5183c9; }
     .log-level-mark { font-weight: 700; border-radius: 3px; padding: 0 2px; }
+    .log-level-mark.info { color: #2c7a1d; background: #f1fedb; }
     .log-level-mark.warn { color: #b45309; background: #fef3c7; }
     .log-level-mark.error, .log-level-mark.fatal { color: #b91c1c; background: #fee2e2; }
     .segment-hit { background: #bbf7d0; color: inherit; border-radius: 2px; }
@@ -174,7 +176,8 @@
                 <option value="browser">Browser console</option>
                 <option value="raw">Raw lines</option>
               </select>
-              <input id="searchInput" class="search-input" type="text" placeholder="Search visible logs" />
+              <textarea id="includePatterns" class="field search-patterns" placeholder="Include patterns&#10;one pattern per line"></textarea>
+              <textarea id="excludePatterns" class="field search-patterns" placeholder="Exclude patterns&#10;one pattern per line"></textarea>
               <button id="clearSearchBtn" class="compact-btn" type="button">Clear search</button>
               <button id="runParseBtn" class="compact-btn" type="button">Re-parse</button>
             </div>
@@ -421,7 +424,8 @@
       fileName: '',
       fileSize: 0,
       formatMode: 'auto',
-      searchText: '',
+      includePatternsText: '',
+      excludePatternsText: '',
       regexSearch: false,
       wrap: true,
       searchCollapsed: true,
@@ -466,7 +470,8 @@
       downloadBtn: document.getElementById('downloadBtn'),
       clearBtn: document.getElementById('clearBtn'),
       formatMode: document.getElementById('formatMode'),
-      searchInput: document.getElementById('searchInput'),
+      includePatterns: document.getElementById('includePatterns'),
+      excludePatterns: document.getElementById('excludePatterns'),
       regexBtn: document.getElementById('regexBtn'),
       wrapBtn: document.getElementById('wrapBtn'),
       levelGroup: document.getElementById('levelGroup'),
@@ -561,7 +566,8 @@
         fileName: state.fileName,
         fileSize: state.fileSize,
         formatMode: state.formatMode,
-        searchText: state.searchText,
+        includePatternsText: state.includePatternsText,
+        excludePatternsText: state.excludePatternsText,
         regexSearch: state.regexSearch,
         wrap: state.wrap,
         searchCollapsed: state.searchCollapsed,
@@ -589,7 +595,12 @@
         if (typeof saved.fileName === 'string') state.fileName = saved.fileName;
         if (typeof saved.fileSize === 'number') state.fileSize = saved.fileSize;
         if (typeof saved.formatMode === 'string') state.formatMode = saved.formatMode;
-        if (typeof saved.searchText === 'string') state.searchText = saved.searchText;
+        if (typeof saved.includePatternsText === 'string') {
+          state.includePatternsText = saved.includePatternsText;
+        } else if (typeof saved.searchText === 'string') {
+          state.includePatternsText = saved.searchText;
+        }
+        if (typeof saved.excludePatternsText === 'string') state.excludePatternsText = saved.excludePatternsText;
         if (typeof saved.regexSearch === 'boolean') state.regexSearch = saved.regexSearch;
         if (typeof saved.wrap === 'boolean') state.wrap = saved.wrap;
         if (typeof saved.searchCollapsed === 'boolean') state.searchCollapsed = saved.searchCollapsed;
@@ -660,6 +671,23 @@
       }
     }
 
+    function parsePatternLines(text) {
+      return String(text || '')
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+    }
+
+    function compileMatchers(text) {
+      const patterns = parsePatternLines(text);
+      if (state.regexSearch) {
+        return patterns
+          .map(pattern => safeRegex(pattern))
+          .filter(Boolean);
+      }
+      return patterns.map(pattern => pattern.toLowerCase());
+    }
+
     function dateTimeLocalToMs(value) {
       if (!value) return null;
       const ms = Date.parse(value);
@@ -672,8 +700,8 @@
     }
 
     function hasActiveFilters() {
-      if (state.searchText.trim()) return true;
-      if (state.regexSearch) return true;
+      if (parsePatternLines(state.includePatternsText).length) return true;
+      if (parsePatternLines(state.excludePatternsText).length) return true;
       if (state.threadFilter.trim()) return true;
       if (state.loggerFilter.trim()) return true;
       if (state.traceFilter.trim()) return true;
@@ -686,8 +714,11 @@
     }
 
     function matchesSearch(entry, matcher) {
-      if (!matcher) return true;
       const blob = entrySearchBlob(entry);
+      if (!matcher || (Array.isArray(matcher) && !matcher.length)) return true;
+      if (Array.isArray(matcher)) {
+        return matcher.some(item => matchesSearch(entry, item));
+      }
       if (matcher instanceof RegExp) {
         matcher.lastIndex = 0;
         return matcher.test(blob);
@@ -698,6 +729,12 @@
     function buildRanges(text, matcher) {
       const ranges = [];
       const source = String(text || '');
+      if (Array.isArray(matcher)) {
+        for (const item of matcher) {
+          ranges.push(...buildRanges(source, item));
+        }
+        return ranges;
+      }
       if (matcher instanceof RegExp) {
         const re = safeRegex(matcher.source);
         if (!re) return ranges;
@@ -734,8 +771,8 @@
         ranges.push({ start: match.index, end: match.index + match[0].length, className: 'log-bracket', priority: 1 });
       }
 
-      if (levelClass === 'warn' || levelClass === 'error' || levelClass === 'fatal') {
-        const levelRe = /\b(WARN|ERROR|FATAL)\b/;
+      if (levelClass === 'info' || levelClass === 'warn' || levelClass === 'error' || levelClass === 'fatal') {
+        const levelRe = /\b(INFO|WARN|ERROR|FATAL)\b/;
         const levelMatch = source.match(levelRe);
         if (levelMatch && typeof levelMatch.index === 'number') {
           ranges.push({
@@ -959,9 +996,7 @@
         els.logTextView.textContent = 'No log text matches the current filters.';
         return;
       }
-      const searchMatcher = state.regexSearch
-        ? safeRegex(state.searchText)
-        : (state.searchText || '').trim().toLowerCase();
+      const searchMatcher = compileMatchers(state.includePatternsText);
       setProgress(0.98, true);
       await nextFrame();
       buildRenderRows(searchMatcher);
@@ -984,9 +1019,12 @@
       }
 
       setStatus('Filtering log...', '');
-      const textMatcher = state.regexSearch
-        ? safeRegex(state.searchText)
-        : (state.searchText || '').trim().toLowerCase();
+      const includePatterns = parsePatternLines(state.includePatternsText);
+      const excludePatterns = parsePatternLines(state.excludePatternsText);
+      const includeMatchers = compileMatchers(state.includePatternsText);
+      const excludeMatchers = compileMatchers(state.excludePatternsText);
+      const invalidIncludeRegex = state.regexSearch && includePatterns.length !== includeMatchers.length;
+      const invalidExcludeRegex = state.regexSearch && excludePatterns.length !== excludeMatchers.length;
       const threadNeedle = state.threadFilter.trim().toLowerCase();
       const loggerNeedle = state.loggerFilter.trim().toLowerCase();
       const traceNeedle = state.traceFilter.trim().toLowerCase();
@@ -1008,8 +1046,9 @@
         if (traceNeedle && !String(entry.traceId || '').toLowerCase().includes(traceNeedle)) continue;
         if (timeFromMs !== null && (entry.timestampMs === null || entry.timestampMs < timeFromMs)) continue;
         if (timeToMs !== null && (entry.timestampMs === null || entry.timestampMs > timeToMs)) continue;
-        if (state.regexSearch && state.searchText && !textMatcher) continue;
-        if (!matchesSearch(entry, textMatcher)) continue;
+        if (invalidIncludeRegex || invalidExcludeRegex) continue;
+        if (includeMatchers.length && !matchesSearch(entry, includeMatchers)) continue;
+        if (excludeMatchers.length && matchesSearch(entry, excludeMatchers)) continue;
         filtered.push(i);
         if ((i + 1) % FILTER_CHUNK_SIZE === 0) {
           setProgress(0.02 + 0.96 * ((i + 1) / total), true);
@@ -1026,7 +1065,11 @@
       updateButtons();
       scheduleSave();
       finishProgress();
-      setStatus('', '');
+      if (invalidIncludeRegex || invalidExcludeRegex) {
+        setStatus('Invalid regex pattern in search editor', 'error');
+      } else {
+        setStatus('', '');
+      }
     }
 
     function updateMeta() {
@@ -1053,7 +1096,8 @@
       els.searchDrawer.hidden = state.searchCollapsed;
       els.filtersDrawer.hidden = state.filtersCollapsed;
       const activeFilters = [
-        state.searchText ? 'search' : '',
+        parsePatternLines(state.includePatternsText).length ? 'include' : '',
+        parsePatternLines(state.excludePatternsText).length ? 'exclude' : '',
         state.regexSearch ? 'regex' : '',
         !state.wrap ? 'nowrap' : '',
         state.threadFilter ? 'thread' : '',
@@ -1212,7 +1256,8 @@
 
     function syncControlsFromState() {
       els.formatMode.value = state.formatMode;
-      els.searchInput.value = state.searchText;
+      els.includePatterns.value = state.includePatternsText;
+      els.excludePatterns.value = state.excludePatternsText;
       els.threadFilter.value = state.threadFilter;
       els.loggerFilter.value = state.loggerFilter;
       els.traceFilter.value = state.traceFilter;
@@ -1242,8 +1287,10 @@
     els.searchToggleBtn.addEventListener('click', () => toggleDrawer('search'));
     els.filtersToggleBtn.addEventListener('click', () => toggleDrawer('filters'));
     els.clearSearchBtn.addEventListener('click', () => {
-      state.searchText = '';
-      els.searchInput.value = '';
+      state.includePatternsText = '';
+      state.excludePatternsText = '';
+      els.includePatterns.value = '';
+      els.excludePatterns.value = '';
       scheduleFilterApply(0);
     });
     els.runParseBtn.addEventListener('click', () => { void parseCurrentText(); });
@@ -1263,8 +1310,12 @@
       state.formatMode = els.formatMode.value;
       void parseCurrentText('Re-parsing log...');
     });
-    els.searchInput.addEventListener('input', () => {
-      state.searchText = els.searchInput.value;
+    els.includePatterns.addEventListener('input', () => {
+      state.includePatternsText = els.includePatterns.value;
+      scheduleFilterApply();
+    });
+    els.excludePatterns.addEventListener('input', () => {
+      state.excludePatternsText = els.excludePatterns.value;
       scheduleFilterApply();
     });
     els.threadFilter.addEventListener('change', () => {
