@@ -56,6 +56,7 @@
     button:disabled { opacity: .5; cursor: not-allowed; }
     .icon-btn { width: 34px; height: 34px; min-width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
     .icon-btn.active, .toggle-btn.active, .level-btn.active { border-color: var(--active-border); color: var(--active-text); background: var(--active-bg); }
+    .icon-btn.primary-run { background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%); border-color: #a7f3d0; color: #047857; }
     .btn-icon { width: 16px; height: 16px; display: inline-block; flex: 0 0 16px; color: currentColor; }
     .btn-icon svg { width: 16px; height: 16px; display: block; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
     .control-grid { display: grid; gap: 10px; padding: 10px 12px 12px; }
@@ -144,9 +145,14 @@
           <div id="status" class="status"></div>
         </div>
         <div class="toolbar">
-          <button id="loadBtn" class="icon-btn" type="button" title="Open log file" aria-label="Open log file"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span></button>
-          <button id="pasteBtn" class="icon-btn" type="button" title="Paste from clipboard" aria-label="Paste from clipboard"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M9 2h6v4H9z"/><path d="M7 6H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1"/></svg></span></button>
-          <button id="parseBtn" class="icon-btn" type="button" title="Parse log" aria-label="Parse log"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12"/><path d="M6 12h12"/><path d="M6 20h12"/><path d="m14 8 4 4-4 4"/></svg></span></button>
+          <button id="parseBtn" class="icon-btn primary-run" type="button" title="Parse log" aria-label="Parse log"><span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 8v8l6-4z"/></svg></span></button>
+          <button id="loadBtn" class="icon-btn" type="button" title="Open log file" aria-label="Open log file"><span class="btn-icon"><svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17l2-5h14l-3 8a2 2 0 01-2 1H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h7a2 2 0 012 2v4" /></svg></span></button>
+          <button id="pasteBtn" class="icon-btn" type="button" title="Paste from clipboard" aria-label="Paste from clipboard">
+            <span class="btn-icon">
+<svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.7778 5H14.6667C15.5047 5 15.9237 5 16.1841 5.2636C16.4444 5.52721 16.4444 5.95147 16.4444 6.8V10M13.7778 5V5.8C13.7778 6.22426 13.7778 6.4364 13.6476 6.5682C13.5174 6.7 13.3079 6.7 12.8889 6.7H7.55556C7.13653 6.7 6.92702 6.7 6.79684 6.5682C6.66667 6.4364 6.66667 6.22426 6.66667 5.8V5M13.7778 5C13.7778 4.57574 13.7778 4.2636 13.6476 4.1318C13.5174 4 13.3079 4 12.8889 4H7.55556C7.13653 4 6.92702 4 6.79684 4.1318C6.66667 4.2636 6.66667 4.57574 6.66667 5M6.66667 5H5.77778C4.93973 5 4.5207 5 4.26035 5.2636C4 5.52721 4 5.95147 4 6.8V17.1959C4 18.0445 4 18.4687 4.26035 18.7323C4.5207 18.9959 4.93973 18.9959 5.77778 18.9959H9.77778M14 20H18C18.9428 20 19.4142 20 19.7071 19.7071C20 19.4142 20 18.9428 20 18V14C20 13.0572 20 12.5858 19.7071 12.2929C19.4142 12 18.9428 12 18 12H14C13.0572 12 12.5858 12 12.2929 12.2929C12 12.5858 12 13.0572 12 14V18C12 18.9428 12 19.4142 12.2929 19.7071C12.5858 20 13.0572 20 14 20Z" stroke="#464455" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+            </span></button>
           <button id="copyBtn" class="icon-btn" type="button" title="Copy filtered log" aria-label="Copy filtered log" disabled><span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span></button>
           <button id="downloadBtn" class="icon-btn" type="button" title="Download filtered log" aria-label="Download filtered log" disabled><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span></button>
           <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span></button>
