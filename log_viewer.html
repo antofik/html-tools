@@ -80,7 +80,7 @@
     .count-badge.error { color: var(--error); background: #fef2f2; border-color: #fecaca; }
     .top-drawer { border-bottom: 1px solid var(--border); background: #fff; }
     .top-drawer[hidden] { display: none; }
-    .search-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: start; }
+    .search-row { display: grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: start; }
     .search-patterns { min-height: 68px; resize: vertical; }
     .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; align-items: center; }
     .badge { border: 1px solid var(--border); padding: 4px 8px; border-radius: 999px; background: #fff; white-space: nowrap; }
@@ -159,8 +159,7 @@
       <div class="panel chrome-panel">
         <div class="top-strip">
           <div class="top-strip-left">
-            <button id="searchToggleBtn" class="compact-btn" type="button" aria-expanded="false" aria-controls="searchDrawer">Search</button>
-            <button id="filtersToggleBtn" class="compact-btn" type="button" aria-expanded="false" aria-controls="filtersDrawer">Filters</button>
+            <button id="searchToggleBtn" class="compact-btn" type="button" aria-expanded="false" aria-controls="searchDrawer">Filter</button>
             <div id="compactMeta" class="compact-meta">Format: auto</div>
           </div>
           <div class="top-strip-right">
@@ -171,7 +170,9 @@
         </div>
         <div id="searchDrawer" class="top-drawer" hidden>
           <div class="control-grid">
-            <div class="search-row">
+            <div class="control-row">
+              <div class="control-label">Levels</div>
+              <div id="levelGroup" class="level-group"></div>
               <select id="formatMode">
                 <option value="auto">Auto detect</option>
                 <option value="spring">Spring / Java</option>
@@ -179,41 +180,12 @@
                 <option value="browser">Browser console</option>
                 <option value="raw">Raw lines</option>
               </select>
+            </div>
+            <div class="search-row">
               <textarea id="includePatterns" class="field search-patterns" placeholder="Include patterns&#10;one pattern per line"></textarea>
               <textarea id="excludePatterns" class="field search-patterns" placeholder="Exclude patterns&#10;one pattern per line"></textarea>
               <button id="clearSearchBtn" class="compact-btn" type="button">Clear search</button>
               <button id="runParseBtn" class="compact-btn" type="button">Re-parse</button>
-            </div>
-          </div>
-        </div>
-        <div id="filtersDrawer" class="top-drawer" hidden>
-          <div class="control-grid">
-            <div class="control-row">
-              <div class="control-label">Levels</div>
-              <div id="levelGroup" class="level-group"></div>
-            </div>
-            <div class="control-row dual">
-              <div class="control-row">
-                <div class="control-label">Thread contains</div>
-                <input id="threadFilter" class="field" type="text" placeholder="http-nio, main, worker..." />
-              </div>
-              <div class="control-row">
-                <div class="control-label">Logger contains</div>
-                <input id="loggerFilter" class="field" type="text" placeholder="com.example..." />
-              </div>
-            </div>
-            <div class="control-row dual">
-              <div class="control-row">
-                <div class="control-label">Trace / Request ID contains</div>
-                <input id="traceFilter" class="field" type="text" placeholder="traceId, requestId..." />
-              </div>
-              <div class="control-row">
-                <div class="control-label">Time range</div>
-                <div class="control-row dual">
-                  <input id="timeFrom" class="field" type="datetime-local" />
-                  <input id="timeTo" class="field" type="datetime-local" />
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -431,13 +403,7 @@
       excludePatternsText: '',
       regexSearch: false,
       searchCollapsed: true,
-      filtersCollapsed: true,
       levelEnabled: Object.fromEntries(LEVELS.map(level => [level, true])),
-      threadFilter: '',
-      loggerFilter: '',
-      traceFilter: '',
-      timeFrom: '',
-      timeTo: '',
       entries: [],
       filteredIndexes: [],
       renderRows: [],
@@ -477,20 +443,13 @@
       excludePatterns: document.getElementById('excludePatterns'),
       regexBtn: document.getElementById('regexBtn'),
       levelGroup: document.getElementById('levelGroup'),
-      threadFilter: document.getElementById('threadFilter'),
-      loggerFilter: document.getElementById('loggerFilter'),
-      traceFilter: document.getElementById('traceFilter'),
-      timeFrom: document.getElementById('timeFrom'),
-      timeTo: document.getElementById('timeTo'),
       resultViewer: document.getElementById('resultViewer'),
       progressBar: document.getElementById('progressBar'),
       compactMeta: document.getElementById('compactMeta'),
       searchToggleBtn: document.getElementById('searchToggleBtn'),
-      filtersToggleBtn: document.getElementById('filtersToggleBtn'),
       clearSearchBtn: document.getElementById('clearSearchBtn'),
       runParseBtn: document.getElementById('runParseBtn'),
       searchDrawer: document.getElementById('searchDrawer'),
-      filtersDrawer: document.getElementById('filtersDrawer'),
       logScroll: document.getElementById('logScroll'),
       logTextView: document.getElementById('logTextView'),
       stacktraceModal: document.getElementById('stacktraceModal'),
@@ -571,13 +530,7 @@
         excludePatternsText: state.excludePatternsText,
         regexSearch: state.regexSearch,
         searchCollapsed: state.searchCollapsed,
-        filtersCollapsed: state.filtersCollapsed,
-        levelEnabled: state.levelEnabled,
-        threadFilter: state.threadFilter,
-        loggerFilter: state.loggerFilter,
-        traceFilter: state.traceFilter,
-        timeFrom: state.timeFrom,
-        timeTo: state.timeTo
+        levelEnabled: state.levelEnabled
       };
       if (state.persistedRawText && state.rawText) {
         payload.rawText = state.rawText;
@@ -607,17 +560,11 @@
         if (typeof saved.excludePatternsText === 'string') state.excludePatternsText = saved.excludePatternsText;
         if (typeof saved.regexSearch === 'boolean') state.regexSearch = saved.regexSearch;
         if (typeof saved.searchCollapsed === 'boolean') state.searchCollapsed = saved.searchCollapsed;
-        if (typeof saved.filtersCollapsed === 'boolean') state.filtersCollapsed = saved.filtersCollapsed;
         if (saved.levelEnabled && typeof saved.levelEnabled === 'object') {
           for (const level of LEVELS) {
             if (typeof saved.levelEnabled[level] === 'boolean') state.levelEnabled[level] = saved.levelEnabled[level];
           }
         }
-        if (typeof saved.threadFilter === 'string') state.threadFilter = saved.threadFilter;
-        if (typeof saved.loggerFilter === 'string') state.loggerFilter = saved.loggerFilter;
-        if (typeof saved.traceFilter === 'string') state.traceFilter = saved.traceFilter;
-        if (typeof saved.timeFrom === 'string') state.timeFrom = saved.timeFrom;
-        if (typeof saved.timeTo === 'string') state.timeTo = saved.timeTo;
       } catch {}
     }
 
@@ -705,10 +652,6 @@
     function hasActiveFilters() {
       if (parsePatternLines(state.includePatternsText).length) return true;
       if (parsePatternLines(state.excludePatternsText).length) return true;
-      if (state.threadFilter.trim()) return true;
-      if (state.loggerFilter.trim()) return true;
-      if (state.traceFilter.trim()) return true;
-      if (state.timeFrom || state.timeTo) return true;
       return LEVELS.some(level => !state.levelEnabled[level]);
     }
 
@@ -1019,11 +962,6 @@
       const excludeMatchers = compileMatchers(state.excludePatternsText);
       const invalidIncludeRegex = state.regexSearch && includePatterns.length !== includeMatchers.length;
       const invalidExcludeRegex = state.regexSearch && excludePatterns.length !== excludeMatchers.length;
-      const threadNeedle = state.threadFilter.trim().toLowerCase();
-      const loggerNeedle = state.loggerFilter.trim().toLowerCase();
-      const traceNeedle = state.traceFilter.trim().toLowerCase();
-      const timeFromMs = dateTimeLocalToMs(state.timeFrom);
-      const timeToMs = dateTimeLocalToMs(state.timeTo);
 
       const filtered = [];
       const total = state.entries.length || 1;
@@ -1035,11 +973,6 @@
         }
         const entry = state.entries[i];
         if (!isLevelEnabled(entry.level)) continue;
-        if (threadNeedle && !String(entry.thread || '').toLowerCase().includes(threadNeedle)) continue;
-        if (loggerNeedle && !String(entry.logger || '').toLowerCase().includes(loggerNeedle)) continue;
-        if (traceNeedle && !String(entry.traceId || '').toLowerCase().includes(traceNeedle)) continue;
-        if (timeFromMs !== null && (entry.timestampMs === null || entry.timestampMs < timeFromMs)) continue;
-        if (timeToMs !== null && (entry.timestampMs === null || entry.timestampMs > timeToMs)) continue;
         if (invalidIncludeRegex || invalidExcludeRegex) continue;
         if (includeMatchers.length && !matchesSearch(entry, includeMatchers)) continue;
         if (excludeMatchers.length && matchesSearch(entry, excludeMatchers)) continue;
@@ -1083,19 +1016,12 @@
       els.downloadBtn.disabled = !hasVisible;
       els.regexBtn.classList.toggle('active', state.regexSearch);
       els.searchToggleBtn.classList.toggle('active', !state.searchCollapsed);
-      els.filtersToggleBtn.classList.toggle('active', !state.filtersCollapsed);
       els.searchToggleBtn.setAttribute('aria-expanded', String(!state.searchCollapsed));
-      els.filtersToggleBtn.setAttribute('aria-expanded', String(!state.filtersCollapsed));
       els.searchDrawer.hidden = state.searchCollapsed;
-      els.filtersDrawer.hidden = state.filtersCollapsed;
       const activeFilters = [
         parsePatternLines(state.includePatternsText).length ? 'include' : '',
         parsePatternLines(state.excludePatternsText).length ? 'exclude' : '',
         state.regexSearch ? 'regex' : '',
-        state.threadFilter ? 'thread' : '',
-        state.loggerFilter ? 'logger' : '',
-        state.traceFilter ? 'trace' : '',
-        state.timeFrom || state.timeTo ? 'time' : '',
         LEVELS.some(level => !state.levelEnabled[level]) ? 'levels' : ''
       ].filter(Boolean);
       els.compactMeta.textContent = `Format: ${state.formatMode}${activeFilters.length ? ' • ' + activeFilters.join(', ') : ''}`;
@@ -1253,18 +1179,12 @@
       els.formatMode.value = state.formatMode;
       els.includePatterns.value = state.includePatternsText;
       els.excludePatterns.value = state.excludePatternsText;
-      els.threadFilter.value = state.threadFilter;
-      els.loggerFilter.value = state.loggerFilter;
-      els.traceFilter.value = state.traceFilter;
-      els.timeFrom.value = state.timeFrom;
-      els.timeTo.value = state.timeTo;
       updateButtons();
       initLevelButtons();
     }
 
     function toggleDrawer(name) {
       if (name === 'search') state.searchCollapsed = !state.searchCollapsed;
-      if (name === 'filters') state.filtersCollapsed = !state.filtersCollapsed;
       updateButtons();
       scheduleSave();
     }
@@ -1280,7 +1200,6 @@
     els.downloadBtn.addEventListener('click', downloadFiltered);
     els.clearBtn.addEventListener('click', clearAll);
     els.searchToggleBtn.addEventListener('click', () => toggleDrawer('search'));
-    els.filtersToggleBtn.addEventListener('click', () => toggleDrawer('filters'));
     els.clearSearchBtn.addEventListener('click', () => {
       state.includePatternsText = '';
       state.excludePatternsText = '';
@@ -1305,46 +1224,6 @@
     });
     els.excludePatterns.addEventListener('input', () => {
       state.excludePatternsText = els.excludePatterns.value;
-      scheduleFilterApply();
-    });
-    els.threadFilter.addEventListener('change', () => {
-      state.threadFilter = els.threadFilter.value;
-      scheduleFilterApply();
-    });
-    els.threadFilter.addEventListener('blur', () => {
-      state.threadFilter = els.threadFilter.value;
-      scheduleFilterApply();
-    });
-    els.loggerFilter.addEventListener('input', () => {
-      state.loggerFilter = els.loggerFilter.value;
-      scheduleFilterApply();
-    });
-    els.loggerFilter.addEventListener('change', () => {
-      state.loggerFilter = els.loggerFilter.value;
-      scheduleFilterApply();
-    });
-    els.loggerFilter.addEventListener('blur', () => {
-      state.loggerFilter = els.loggerFilter.value;
-      scheduleFilterApply();
-    });
-    els.traceFilter.addEventListener('input', () => {
-      state.traceFilter = els.traceFilter.value;
-      scheduleFilterApply();
-    });
-    els.traceFilter.addEventListener('change', () => {
-      state.traceFilter = els.traceFilter.value;
-      scheduleFilterApply();
-    });
-    els.traceFilter.addEventListener('blur', () => {
-      state.traceFilter = els.traceFilter.value;
-      scheduleFilterApply();
-    });
-    els.timeFrom.addEventListener('change', () => {
-      state.timeFrom = els.timeFrom.value;
-      scheduleFilterApply();
-    });
-    els.timeTo.addEventListener('change', () => {
-      state.timeTo = els.timeTo.value;
       scheduleFilterApply();
     });
 
