@@ -138,6 +138,14 @@
     .u-meta .u-code { color: #2563eb; background: var(--meta-bg); }
     .empty { padding: 32px 18px; color: var(--muted); }
     .error-box { padding: 18px; border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #991b1b; line-height: 1.45; }
+    .busy-box { padding: 28px 18px; display: grid; gap: 12px; }
+    .busy-label { font-size: 13px; color: #475569; font-weight: 700; }
+    .busy-track { height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; position: relative; }
+    .busy-fill { position: absolute; inset: 0 auto 0 0; width: 38%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 55%, #2563eb 100%); animation: busy-slide 1.05s ease-in-out infinite; }
+    @keyframes busy-slide {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(320%); }
+    }
     @media (max-width: 980px) {
       .app-header { flex-direction: column; align-items: flex-start; }
       .toolbar { grid-template-columns: 1fr; }
@@ -282,6 +290,12 @@
       viewUnifiedBtn: document.getElementById('viewUnifiedBtn')
     };
     function escapeHtml(s) { return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function renderBusy(message) {
+      els.resultBody.innerHTML = `<div class="busy-box"><div class="busy-label">${escapeHtml(message)}</div><div class="busy-track"><div class="busy-fill"></div></div></div>`;
+    }
+    function waitForNextPaint() {
+      return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
     function renderVisibleText(text) {
       const source = text ?? '';
       if (!state.showInvisibleChars) return escapeHtml(source);
@@ -297,6 +311,15 @@
     function normalizeWhitespaceForCompare(text) { return (text ?? '').replace(/\s+/gu, ''); }
     function buildCompareText(text, patternInfo) {
       let out = applyIgnorePatterns(text ?? '', patternInfo);
+      if (state.ignoreWhitespace) out = normalizeWhitespaceForCompare(out);
+      return out;
+    }
+    function buildMatchText(text, patternInfo) {
+      let out = text ?? '';
+      for (const entry of patternInfo.compiled) {
+        entry.regex.lastIndex = 0;
+        out = out.replace(entry.regex, '');
+      }
       if (state.ignoreWhitespace) out = normalizeWhitespaceForCompare(out);
       return out;
     }
@@ -579,8 +602,9 @@
     function readFileInto(file, side, fileHandle = null, shouldCompute = true) {
       if (!file) return Promise.resolve();
       return new Promise((resolve, reject) => {
+        renderBusy(`Reading ${file.name}...`);
         const reader = new FileReader();
-        reader.onload = () => {
+        reader.onload = async () => {
           const text = typeof reader.result === 'string' ? reader.result : '';
           if (side === 'left') {
             els.leftText.value = text;
@@ -589,7 +613,7 @@
           }
           updateFileMeta(side, file.name, file.size, fileHandle);
           scheduleSave();
-          if (shouldCompute) computeDiff();
+          if (shouldCompute) await computeDiff(`Applying ${file.name}...`);
           resolve();
         };
         reader.onerror = () => reject(reader.error || new Error('Could not read file'));
@@ -598,13 +622,14 @@
     }
     async function loadFilePair(leftSource, rightSource) {
       if (!leftSource || !rightSource) return;
+      renderBusy('Reading files...');
       const leftFile = leftSource.file || await leftSource.handle.getFile();
       const rightFile = rightSource.file || await rightSource.handle.getFile();
       await Promise.all([
         readFileInto(leftFile, 'left', leftSource.handle || null, false),
         readFileInto(rightFile, 'right', rightSource.handle || null, false)
       ]);
-      computeDiff();
+      await computeDiff('Processing files...');
     }
     async function openFiles() {
       if (!supportsFileSystemAccess()) {
@@ -633,8 +658,9 @@
       }
       if (!jobs.length) return;
       try {
+        renderBusy('Refreshing files from disk...');
         await Promise.all(jobs);
-        computeDiff();
+        await computeDiff('Processing refreshed files...');
       } catch {}
     }
     function isFileDrag(event) {
@@ -813,7 +839,7 @@
       const normalizedMessage = normalizeLogMessage(line);
       return {
         raw: line,
-        compare: buildCompareText(normalizedMessage || line, patternInfo),
+        compare: buildMatchText(line, patternInfo),
         message: normalizedMessage || line
       };
     }
@@ -830,7 +856,7 @@
         return entries;
       }
       const valueText = stringifyStable(value);
-      const compareValueText = buildCompareText(valueText, patternInfo);
+      const compareValueText = buildMatchText(valueText, patternInfo);
       entries.push({ id: path, keyText: path, prefixText: `${path}: `, valueText, compareValueText, fullText: `${path}: ${valueText}` });
       return entries;
     }
@@ -892,7 +918,9 @@
         if (left && right) {
           const leftCompareText = left.compareValueText ?? left.valueText ?? '';
           const rightCompareText = right.compareValueText ?? right.valueText ?? '';
-          if (left.prefixText === right.prefixText && leftCompareText === rightCompareText) {
+          const leftCompareFullText = buildMatchText(left.fullText ?? '', patternInfo);
+          const rightCompareFullText = buildMatchText(right.fullText ?? '', patternInfo);
+          if ((left.prefixText === right.prefixText && leftCompareText === rightCompareText) || leftCompareFullText === rightCompareFullText) {
             rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(left.fullText), rightHtml: renderVisibleText(right.fullText), leftText: left.fullText, rightText: right.fullText });
             same++;
           } else {
@@ -925,7 +953,7 @@
     }
     function buildTextDiff(leftText, rightText, patternInfo, skipPatternInfo) {
       const leftSourceLines = normalizeLines(leftText), rightSourceLines = normalizeLines(rightText);
-      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildCompareText(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
+      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildMatchText(line, patternInfo) })), rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildMatchText(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
@@ -938,9 +966,14 @@
         for (let k = 0; k < pairCount; k++) {
           const dl = dels[k], il = ins[k];
           if (dl != null && il != null) {
-            const intra = diffChars(dl.raw, il.raw, patternInfo);
-            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl.raw, rightText: il.raw });
-            changed++;
+            if (dl.compare === il.compare) {
+              rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(dl.raw), rightHtml: renderVisibleText(il.raw), leftText: dl.raw, rightText: il.raw });
+              same++;
+            } else {
+              const intra = diffChars(dl.raw, il.raw, patternInfo);
+              rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl.raw, rightText: il.raw });
+              changed++;
+            }
           } else if (dl != null) {
             rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(dl.raw), rightHtml: '', leftText: dl.raw, rightText: '' });
             removed++;
@@ -968,8 +1001,8 @@
     function buildLogDiff(leftText, rightText, patternInfo, skipPatternInfo) {
       const inlinePatternInfo = buildLogInlinePatternInfo(patternInfo);
       const leftSourceLines = normalizeLines(leftText), rightSourceLines = normalizeLines(rightText);
-      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, patternInfo));
-      const rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, patternInfo));
+      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, inlinePatternInfo));
+      const rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, inlinePatternInfo));
       const raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare);
       const rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
@@ -990,9 +1023,14 @@
         for (let index = 0; index < pairCount; index++) {
           const leftLine = dels[index], rightLine = ins[index];
           if (leftLine != null && rightLine != null) {
-            const intra = diffChars(leftLine.raw, rightLine.raw, inlinePatternInfo);
-            rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: leftLine.raw, rightText: rightLine.raw });
-            changed++;
+            if (leftLine.compare === rightLine.compare) {
+              rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(leftLine.raw), rightHtml: renderVisibleText(rightLine.raw), leftText: leftLine.raw, rightText: rightLine.raw });
+              same++;
+            } else {
+              const intra = diffChars(leftLine.raw, rightLine.raw, inlinePatternInfo);
+              rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: leftLine.raw, rightText: rightLine.raw });
+              changed++;
+            }
           } else if (leftLine != null) {
             rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(leftLine.raw), rightHtml: '', leftText: leftLine.raw, rightText: '' });
             removed++;
@@ -1020,7 +1058,7 @@
       const leftEntries = pruneEnvSeparatorsAroundSkipped(parseEnvEntries(leftText), skipPatternInfo), rightEntries = pruneEnvSeparatorsAroundSkipped(parseEnvEntries(rightText), skipPatternInfo);
       const normalizeEntries = entries => entries.map(item => {
         const valueText = item.valueText || '';
-        const compareValueText = buildCompareText(valueText, patternInfo);
+        const compareValueText = buildMatchText(valueText, patternInfo);
         return { ...item, valueText, compareValueText, fullText: item.rawLine || `${item.prefixText || ''}${valueText}` };
       });
       const filteredLeftEntries = filterEntriesBySkipPatterns(normalizeEntries(leftEntries), skipPatternInfo);
@@ -1098,7 +1136,9 @@
       a.remove();
       URL.revokeObjectURL(url);
     }
-    function computeDiff() {
+    async function computeDiff(message = 'Processing diff...') {
+      renderBusy(message);
+      await waitForNextPaint();
       const left = els.leftText.value, right = els.rightText.value;
       state.compareMode = els.compareMode.value;
       const patternInfo = buildIgnorePatternInfo();
@@ -1246,18 +1286,18 @@
       scheduleSave();
     }
     els.openBtn.addEventListener('click', () => { void openFiles(); });
-    els.computeBtn.addEventListener('click', computeDiff);
+    els.computeBtn.addEventListener('click', () => { void computeDiff('Generating diff...'); });
     els.refreshBtn.addEventListener('click', () => { void refreshFromDisk(); });
     els.downloadBtn.addEventListener('click', downloadUnifiedHtml);
     els.toggleWhitespaceBtn.addEventListener('click', () => {
       state.ignoreWhitespace = !state.ignoreWhitespace;
       updateWhitespaceButton();
-      computeDiff();
+      void computeDiff('Applying whitespace setting...');
     });
     els.toggleInvisibleBtn.addEventListener('click', () => {
       state.showInvisibleChars = !state.showInvisibleChars;
       updateInvisibleButton();
-      computeDiff();
+      void computeDiff('Refreshing diff...');
     });
     els.toggleSameBtn.addEventListener('click', () => {
       state.showSameLines = !state.showSameLines;
@@ -1273,7 +1313,7 @@
     els.toggleIgnoreActiveBtn.addEventListener('click', () => {
       state.ignorePatternsEnabled = !state.ignorePatternsEnabled;
       updateIgnoreEnabledButton();
-      computeDiff();
+      void computeDiff('Applying ignore patterns...');
     });
     els.swapBtn.addEventListener('click', () => {
       [els.leftText.value, els.rightText.value] = [els.rightText.value, els.leftText.value];
@@ -1282,12 +1322,12 @@
       els.leftName.textContent = state.leftName || '-';
       els.rightName.textContent = state.rightName || '-';
       updateRefreshButton();
-      computeDiff();
+      void computeDiff('Swapping files...');
     });
     els.clearBtn.addEventListener('click', clearAll);
     els.viewSideBtn.addEventListener('click', () => setViewMode('side'));
     els.viewUnifiedBtn.addEventListener('click', () => setViewMode('unified'));
-    els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; computeDiff(); });
+    els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; void computeDiff('Changing comparison mode...'); });
     els.openFilesInput.addEventListener('change', event => {
       const files = Array.from(event.target.files || []);
       if (files.length < 2) return;
@@ -1297,8 +1337,8 @@
     els.rightText.addEventListener('input', scheduleSave);
     els.ignorePatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); });
     els.skipPatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.skipPatternsRaw = els.skipPatterns.value; scheduleSave(); });
-    els.ignorePatterns.addEventListener('blur', () => { state.ignorePatternsRaw = els.ignorePatterns.value; computeDiff(); });
-    els.skipPatterns.addEventListener('blur', () => { state.skipPatternsRaw = els.skipPatterns.value; computeDiff(); });
+    els.ignorePatterns.addEventListener('blur', () => { state.ignorePatternsRaw = els.ignorePatterns.value; void computeDiff('Applying ignore patterns...'); });
+    els.skipPatterns.addEventListener('blur', () => { state.skipPatternsRaw = els.skipPatterns.value; void computeDiff('Applying ignore patterns...'); });
     attachDropZone(els.leftDrop, els.leftFile, 'left');
     attachDropZone(els.rightDrop, els.rightFile, 'right');
     window.addEventListener('dragenter', event => {
@@ -1338,7 +1378,7 @@
     updateSameButton();
     updateViewButtons();
     updateRefreshButton();
-    if (els.leftText.value || els.rightText.value) computeDiff();
+    if (els.leftText.value || els.rightText.value) void computeDiff('Restoring diff...');
     window.addEventListener('scroll', updateOverviewViewport, { passive: true });
     window.addEventListener('resize', refreshOverview);
     window.addEventListener('beforeunload', saveStateNow);

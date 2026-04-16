@@ -10,11 +10,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$levels = @(
-  @{ Name = "INFO"; Weight = 78 },
-  @{ Name = "DEBUG"; Weight = 12 },
-  @{ Name = "WARN"; Weight = 7 },
-  @{ Name = "ERROR"; Weight = 3 }
+$errorProbability = 0.001
+$nonErrorLevels = @(
+  @{ Name = "INFO"; Weight = 80 },
+  @{ Name = "DEBUG"; Weight = 13 },
+  @{ Name = "WARN"; Weight = 7 }
 )
 
 $loggers = @(
@@ -104,7 +104,7 @@ function Get-WeightedLevel {
   param([int]$Roll)
 
   $sum = 0
-  foreach ($level in $levels) {
+  foreach ($level in $nonErrorLevels) {
     $sum += $level.Weight
     if ($Roll -le $sum) {
       return $level.Name
@@ -182,7 +182,12 @@ $maxRecentTraceIds = 64
 try {
   for ($i = 0; $i -lt $LineCount; $i++) {
     $timestamp = $start.AddMilliseconds($i * (Get-Random -Minimum 15 -Maximum 180))
-    $level = Get-WeightedLevel -Roll (Get-Random -Minimum 1 -Maximum 101)
+    $isError = (Get-Random -Minimum 0.0 -Maximum 1.0) -lt $errorProbability
+    if ($isError) {
+      $level = "ERROR"
+    } else {
+      $level = Get-WeightedLevel -Roll (Get-Random -Minimum 1 -Maximum 101)
+    }
     $reuseExistingTraceId = $recentTraceIds.Count -gt 0 -and ((Get-Random -Minimum 0 -Maximum 100) -lt 38)
     if ($reuseExistingTraceId) {
       $traceId = $recentTraceIds[(Get-Random -Minimum 0 -Maximum $recentTraceIds.Count)]
