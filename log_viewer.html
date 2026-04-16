@@ -32,6 +32,10 @@
     }
 
     * { box-sizing: border-box; }
+    html, body { -ms-overflow-style: auto; scrollbar-width: auto; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 12px; }
+    html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.45); border-radius: 999px; }
+    html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.7); }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: auto; overflow-y: auto; }
     body.drag-file::before {
       content: 'Drop log file to open';
@@ -51,8 +55,8 @@
       pointer-events: none;
     }
     button, input, select, textarea { font: inherit; }
-    .container { width: 100%; max-width: none; margin: 0; padding: 0 0 16px; min-height: 100vh; }
-    .header-shell { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: var(--bg); padding: 0 12px 12px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); }
+    .container { width: 100%; max-width: none; margin: 0; padding: 0 24px 16px 0; min-height: 100vh; }
+    .header-shell { position: fixed; top: 0; left: 0; right: 24px; z-index: 20; background: var(--bg); padding: 0 12px 12px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); }
     .header-spacer { height: 0; }
     .app-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0 0; margin-bottom: 10px; }
     h1 { margin: 0; font-size: 22px; line-height: 1.1; color: #111827; }
@@ -141,6 +145,13 @@
     .log-line-inner { height: 100%; line-height: var(--log-row-height); }
     .log-line-text { line-height: var(--log-row-height); }
     .virtual-spacer { display: block; height: 0; }
+    .overview-rail { position: fixed; top: 0; right: 0; bottom: 0; width: 24px; border-left: 1px solid rgba(148, 163, 184, 0.18); background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%); overflow: hidden; cursor: pointer; z-index: 30; }
+    .overview-markers { position: absolute; inset: 0; }
+    .overview-marker { position: absolute; left: 0; right: 0; min-height: 3px; opacity: .95; border-radius: 2px; }
+    .overview-marker.warn { background: #f59e0b; }
+    .overview-marker.error,
+    .overview-marker.fatal { background: #ef4444; }
+    .overview-viewport { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(15, 23, 42, 0.14); border-bottom: 1px solid rgba(15, 23, 42, 0.14); background: rgba(100, 116, 139, 0.28); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); pointer-events: none; }
     .detail-btn { width: 20px; height: 20px; min-width: 20px; padding: 0; border: none; background: transparent; color: #64748b; cursor: pointer; vertical-align: middle; border-radius: 6px; }
     .detail-btn:hover { background: #f3f4f6; }
     .stacktrace-btn::before { content: "💥"; font-size: 13px; line-height: 1; font-weight: 700; color: #b91c1c; }
@@ -271,6 +282,10 @@
         </div>
       </div>
     </div>
+    <div id="overviewRail" class="overview-rail" aria-label="Log overview">
+      <div id="overviewMarkers" class="overview-markers"></div>
+      <div id="overviewViewport" class="overview-viewport"></div>
+    </div>
     <input id="fileInput" type="file" accept=".log,.txt,.out,.json,text/plain" hidden />
   </div>
 
@@ -280,6 +295,7 @@
     const SAVE_DEBOUNCE_MS = 220;
     const FILTER_DEBOUNCE_MS = 250;
     const FILTER_CHUNK_SIZE = 2000;
+    const OVERVIEW_BUCKET_COUNT = 320;
     const LEVELS = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'];
 
     const WORKER_SCRIPT = `
@@ -535,7 +551,10 @@
       multilineModal: document.getElementById('multilineModal'),
       multilineModalTitle: document.getElementById('multilineModalTitle'),
       multilineModalBody: document.getElementById('multilineModalBody'),
-      multilineModalClose: document.getElementById('multilineModalClose')
+      multilineModalClose: document.getElementById('multilineModalClose'),
+      overviewRail: document.getElementById('overviewRail'),
+      overviewMarkers: document.getElementById('overviewMarkers'),
+      overviewViewport: document.getElementById('overviewViewport')
     };
 
     function setStatus(message, kind = '') {
@@ -923,6 +942,93 @@
       els.logTextView.style.width = `${state.renderWidthCh + 2}ch`;
     }
 
+    function getOverviewLevelPriority(levelClass) {
+      if (levelClass === 'fatal') return 3;
+      if (levelClass === 'error') return 2;
+      if (levelClass === 'warn') return 1;
+      return 0;
+    }
+
+    function getOverviewBucketClass(startIndex, endIndexExclusive) {
+      let bestClass = '';
+      let bestPriority = 0;
+      for (let i = startIndex; i < endIndexExclusive; i++) {
+        const entryIndex = state.filteredIndexes[i];
+        const entry = state.entries[entryIndex];
+        const levelClass = String(entry?.level || '').toLowerCase();
+        const priority = getOverviewLevelPriority(levelClass);
+        if (priority > bestPriority) {
+          bestPriority = priority;
+          bestClass = levelClass;
+          if (priority === 3) break;
+        }
+      }
+      return bestClass;
+    }
+
+    function updateOverviewViewport() {
+      if (!els.overviewRail || !els.overviewViewport) return;
+      const docEl = document.documentElement;
+      const maxScroll = Math.max(0, docEl.scrollHeight - window.innerHeight);
+      const railHeight = els.overviewRail.clientHeight;
+      const thumbHeight = Math.max(18, railHeight * (window.innerHeight / Math.max(docEl.scrollHeight, 1)));
+      const top = maxScroll > 0 ? ((railHeight - thumbHeight) * window.scrollY / maxScroll) : 0;
+      els.overviewViewport.style.height = `${thumbHeight}px`;
+      els.overviewViewport.style.transform = `translateY(${top}px)`;
+    }
+
+    function refreshOverview() {
+      if (!els.overviewMarkers) return;
+      const totalEntries = state.filteredIndexes.length;
+      if (!totalEntries) {
+        els.overviewMarkers.innerHTML = '';
+        updateOverviewViewport();
+        return;
+      }
+      const bucketCount = Math.min(OVERVIEW_BUCKET_COUNT, totalEntries);
+      const bucketSize = Math.max(1, Math.ceil(totalEntries / bucketCount));
+      const markers = [];
+      for (let bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++) {
+        const start = bucketIndex * bucketSize;
+        const end = Math.min(totalEntries, start + bucketSize);
+        if (start >= end) break;
+        const cls = getOverviewBucketClass(start, end);
+        if (!cls) continue;
+        const topPct = (start / totalEntries) * 100;
+        const heightPct = Math.max(((end - start) / totalEntries) * 100, 0.35);
+        const clampedTopPct = Math.min(Math.max(topPct, 0), 99.65);
+        const clampedHeightPct = Math.min(heightPct, 100 - clampedTopPct);
+        markers.push(`<div class="overview-marker ${cls}" style="top:${clampedTopPct}%;height:${clampedHeightPct}%"></div>`);
+      }
+      els.overviewMarkers.innerHTML = markers.join('');
+      updateOverviewViewport();
+    }
+
+    function setupOverviewRail() {
+      if (!els.overviewRail || els.overviewRail.dataset.bound) return;
+      const scrollFromClientY = clientY => {
+        const rect = els.overviewRail.getBoundingClientRect();
+        const ratio = Math.min(Math.max((clientY - rect.top) / Math.max(rect.height, 1), 0), 1);
+        const docEl = document.documentElement;
+        window.scrollTo({ top: ratio * Math.max(docEl.scrollHeight - window.innerHeight, 0), behavior: 'auto' });
+      };
+      els.overviewRail.addEventListener('click', event => {
+        scrollFromClientY(event.clientY);
+      });
+      els.overviewRail.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        scrollFromClientY(event.clientY);
+        const move = moveEvent => scrollFromClientY(moveEvent.clientY);
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up, { once: true });
+      });
+      els.overviewRail.dataset.bound = 'true';
+    }
+
     function renderVisibleRows(force = false) {
       const totalRows = state.renderRows.length;
       if (!totalRows) {
@@ -930,6 +1036,7 @@
         els.logTextView.style.width = '';
         els.logTextView.style.minWidth = '';
         els.logTextView.textContent = 'No log text matches the current filters.';
+        refreshOverview();
         return;
       }
 
@@ -941,6 +1048,7 @@
         state.visibleRowStart = 0;
         state.visibleRowEnd = totalRows;
         els.logTextView.innerHTML = state.renderRows.map(row => renderRowHtml(row, state.renderMatcher)).join('');
+        refreshOverview();
         return;
       }
 
@@ -962,6 +1070,7 @@
         `<span class="virtual-spacer" style="height:${topHeight}px"></span>` +
         visibleHtml +
         `<span class="virtual-spacer" style="height:${bottomHeight}px"></span>`;
+      refreshOverview();
     }
 
     function scheduleVisibleRowRender(force = false) {
@@ -1443,16 +1552,21 @@
       if (state.worker) state.worker.terminate();
       if (state.workerUrl) URL.revokeObjectURL(state.workerUrl);
     });
-    window.addEventListener('scroll', () => scheduleVisibleRowRender(), { passive: true });
+    window.addEventListener('scroll', () => {
+      scheduleVisibleRowRender();
+      updateOverviewViewport();
+    }, { passive: true });
     window.addEventListener('resize', () => {
       syncHeaderSpacer();
       scheduleVisibleRowRender(true);
+      updateOverviewViewport();
     });
 
     restoreState();
     syncControlsFromState();
     updateMeta();
     updateStats();
+    setupOverviewRail();
     void renderLogText();
     syncHeaderSpacer();
     updateButtons();
