@@ -61,6 +61,11 @@
     .dropzone.drag { border-color: #93c5fd; background: #f8fafc; }
     .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
     .dropzone p { margin: 0 0 10px; color: var(--muted); }
+    body.page-drag::before { content: ''; position: fixed; inset: 0; background: rgba(255,255,255,0.55); z-index: 40; pointer-events: none; }
+    .page-drop-overlay { position: fixed; inset: 16px; display: none; z-index: 41; pointer-events: none; }
+    body.page-drag .page-drop-overlay { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .page-drop-zone { border: 2px dashed #cbd5e1; border-radius: 18px; background: rgba(248, 250, 252, 0.88); display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: #64748b; font-size: 18px; font-weight: 800; letter-spacing: .02em; transition: .12s ease; }
+    .page-drop-zone.active { border-color: #86efac; background: rgba(240, 253, 244, 0.96); color: #166534; box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.4); }
     .filename { font-family: var(--mono); font-size: 13px; color: #475569; word-break: break-all; }
     .preview { width: 100%; min-height: 180px; max-height: 280px; resize: vertical; border: 1px solid var(--border); border-radius: 12px; background: #ffffff; color: var(--text); padding: 12px; font-family: var(--mono); font-size: 13px; line-height: 1.45; margin-top: 12px; }
     button, select, .segmented button { appearance: none; border: 1px solid var(--border); background: var(--button); color: #374151; border-radius: 12px; padding: 11px 14px; font-weight: 700; cursor: pointer; transition: .15s ease; min-height: 44px; }
@@ -213,6 +218,10 @@
       <div id="resultBody" class="panel-body"><div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div></div>
     </div>
   </div>
+  <div id="pageDropOverlay" class="page-drop-overlay" aria-hidden="true">
+    <div id="pageDropLeft" class="page-drop-zone">Drop file for left side</div>
+    <div id="pageDropRight" class="page-drop-zone">Drop file for right side</div>
+  </div>
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
@@ -244,6 +253,9 @@
       stats: document.getElementById('stats'),
       leftDrop: document.getElementById('leftDrop'),
       rightDrop: document.getElementById('rightDrop'),
+      pageDropOverlay: document.getElementById('pageDropOverlay'),
+      pageDropLeft: document.getElementById('pageDropLeft'),
+      pageDropRight: document.getElementById('pageDropRight'),
       viewSideBtn: document.getElementById('viewSideBtn'),
       viewUnifiedBtn: document.getElementById('viewUnifiedBtn')
     };
@@ -498,9 +510,26 @@
       };
       reader.readAsText(file);
     }
+    function isFileDrag(event) {
+      const types = event.dataTransfer?.types;
+      return Array.isArray(types) ? types.includes('Files') : Boolean(types && Array.from(types).includes('Files'));
+    }
+    function getPageDropSide(clientX) {
+      return clientX < (window.innerWidth / 2) ? 'left' : 'right';
+    }
+    function updatePageDropActive(side) {
+      document.body.classList.add('page-drag');
+      els.pageDropLeft.classList.toggle('active', side === 'left');
+      els.pageDropRight.classList.toggle('active', side === 'right');
+    }
+    function clearPageDropState() {
+      document.body.classList.remove('page-drag');
+      els.pageDropLeft.classList.remove('active');
+      els.pageDropRight.classList.remove('active');
+    }
     function attachDropZone(dropEl, inputEl, side) {
-      ['dragenter', 'dragover'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.add('drag'); }));
-      ['dragleave', 'drop'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.remove('drag'); }));
+      ['dragenter', 'dragover'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag'); }));
+      ['dragleave', 'drop'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag'); }));
       dropEl.addEventListener('drop', e => { const file = e.dataTransfer?.files?.[0]; if (file) readFileInto(file, side); });
       inputEl.addEventListener('change', e => { const file = e.target.files?.[0]; if (file) readFileInto(file, side); });
     }
@@ -1115,6 +1144,30 @@
     els.skipPatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.skipPatternsRaw = els.skipPatterns.value; scheduleSave(); computeDiff(); });
     attachDropZone(els.leftDrop, els.leftFile, 'left');
     attachDropZone(els.rightDrop, els.rightFile, 'right');
+    window.addEventListener('dragenter', event => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      updatePageDropActive(getPageDropSide(event.clientX));
+    });
+    window.addEventListener('dragover', event => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      updatePageDropActive(getPageDropSide(event.clientX));
+    });
+    window.addEventListener('dragleave', event => {
+      if (!document.body.classList.contains('page-drag')) return;
+      const related = event.relatedTarget;
+      if (related) return;
+      clearPageDropState();
+    });
+    window.addEventListener('drop', event => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      const file = event.dataTransfer?.files?.[0];
+      const side = getPageDropSide(event.clientX);
+      clearPageDropState();
+      if (file) readFileInto(file, side);
+    });
     restoreState();
     updateIgnorePanelVisibility();
     updateIgnoreEnabledButton();
