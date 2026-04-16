@@ -392,6 +392,10 @@
           || /^[A-Za-z0-9_$][A-Za-z0-9_$.]*,\\s*$/.test(line);
       }
 
+      function hasDetectedLevel(entry) {
+        return !!(entry && entry.level && LEVEL_RE.test(entry.level));
+      }
+
       self.onmessage = event => {
         const data = event.data || {};
         if (data.type !== 'parse') return;
@@ -405,8 +409,14 @@
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
           const parsed = parseLineStart(line, mode);
-          const shouldStart = !!parsed;
-          const continuation = current && !shouldStart && (isContinuationLine(line) || line === '');
+          const parsedHasLevel = hasDetectedLevel(parsed);
+          const currentHasLevel = hasDetectedLevel(current);
+          const shouldStart = !!parsed && parsedHasLevel;
+          const continuation = current && (
+            (!shouldStart && currentHasLevel)
+            || isContinuationLine(line)
+            || line === ''
+          );
 
           if (shouldStart) {
             if (current) entries.push(current);
