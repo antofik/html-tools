@@ -1295,8 +1295,10 @@
     });
     els.leftText.addEventListener('input', scheduleSave);
     els.rightText.addEventListener('input', scheduleSave);
-    els.ignorePatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); computeDiff(); });
-    els.skipPatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.skipPatternsRaw = els.skipPatterns.value; scheduleSave(); computeDiff(); });
+    els.ignorePatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); });
+    els.skipPatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.skipPatternsRaw = els.skipPatterns.value; scheduleSave(); });
+    els.ignorePatterns.addEventListener('blur', () => { state.ignorePatternsRaw = els.ignorePatterns.value; computeDiff(); });
+    els.skipPatterns.addEventListener('blur', () => { state.skipPatternsRaw = els.skipPatterns.value; computeDiff(); });
     attachDropZone(els.leftDrop, els.leftFile, 'left');
     attachDropZone(els.rightDrop, els.rightFile, 'right');
     window.addEventListener('dragenter', event => {
