@@ -75,6 +75,7 @@
     .icon-badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #22c55e; color: #f0fdf4; font-size: 10px; line-height: 18px; font-weight: 600; text-align: center; box-shadow: 0 0 0 2px #ffffff; display: none; }
     .icon-badge.inactive { background: #94a3b8; color: #f8fafc; }
     .inline-toggle { min-height: 36px; padding: 8px 12px; font-size: 12px; border-radius: 10px; }
+    .text-toggle-btn { min-height: 44px; padding: 11px 14px; font-size: 14px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; }
     .icon-badge.visible { display: inline-block; }
     .icon-btn.active,
     .inline-toggle.active { border-color: #22c55e; color: #15803d; background: #f0fdf4; }
@@ -167,7 +168,8 @@
       <button id="refreshBtn" class="icon-btn" type="button" title="Refresh file from disk" aria-label="Refresh file from disk" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 12C2.5 12.2761 2.72386 12.5 3 12.5C3.27614 12.5 3.5 12.2761 3.5 12H2.5ZM3.5 12C3.5 7.30558 7.30558 3.5 12 3.5V2.5C6.75329 2.5 2.5 6.75329 2.5 12H3.5ZM12 3.5C15.3367 3.5 18.2252 5.4225 19.6167 8.22252L20.5122 7.77748C18.9583 4.65062 15.7308 2.5 12 2.5V3.5Z" fill="currentColor"/><path d="M20.4716 2.42157V8.07843H14.8147" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21.5 12C21.5 11.7239 21.2761 11.5 21 11.5C20.7239 11.5 20.5 11.7239 20.5 12L21.5 12ZM20.5 12C20.5 16.6944 16.6944 20.5 12 20.5L12 21.5C17.2467 21.5 21.5 17.2467 21.5 12L20.5 12ZM12 20.5C8.66333 20.5 5.77477 18.5775 4.38328 15.7775L3.48776 16.2225C5.04168 19.3494 8.26923 21.5 12 21.5L12 20.5Z" fill="currentColor"/><path d="M3.52844 21.5784L3.52844 15.9216L9.18529 15.9216" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="btn-text">Refresh file from disk</span></span></button>
       <button id="downloadBtn" class="icon-btn" type="button" title="Download unified diff HTML" aria-label="Download unified diff HTML" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="btn-text">Download unified diff HTML</span></span></button>
       <button id="toggleWhitespaceBtn" class="icon-btn" type="button" title="Ignore whitespace mismatches" aria-label="Ignore whitespace mismatches"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h16"/><path d="M4 12h10"/><path d="M4 16h16"/></svg></span><span class="btn-text">Ignore whitespace mismatches</span></span></button>
-      <button id="toggleInvisibleBtn" class="icon-btn" type="button" title="Visualize invisible characters" aria-label="Visualize invisible characters"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7s5.8 1.9 8 5.7c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="btn-text">Visualize invisible characters</span></span></button>
+      <button id="toggleInvisibleBtn" class="icon-btn" type="button" title="Visualize invisible characters" aria-label="Visualize invisible characters"><span class="btn-content"><span class="btn-icon" aria-hidden="true" style="font-size:18px;line-height:1;font-family:var(--mono);font-weight:700;font-style:italic;">π</span><span class="btn-text">Visualize invisible characters</span></span></button>
+      <button id="toggleSameBtn" class="text-toggle-btn active" type="button" title="Hide unchanged lines" aria-label="Hide unchanged lines"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7s5.8 1.9 8 5.7c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="btn-text">Hide unchanged lines</span></span></button>
       <button id="toggleIgnoreBtn" class="icon-btn with-badge" type="button" title="Ignore patterns" aria-label="Ignore patterns" aria-expanded="false" aria-controls="ignorePanel"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="btn-text">Ignore patterns</span></span><span id="ignoreBadge" class="icon-badge" aria-hidden="true">0</span></button>
       <button id="swapBtn" class="icon-btn" type="button" title="Swap sides" aria-label="Swap sides"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></svg></span><span class="btn-text">Swap sides</span></span></button>
       <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="btn-text">Clear</span></span></button>
@@ -240,11 +242,12 @@
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
-    const state = { leftName: '', rightName: '', leftFileHandle: null, rightFileHandle: null, diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, diagnostics: null, saveTimer: null };
+    const state = { leftName: '', rightName: '', leftFileHandle: null, rightFileHandle: null, diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, showSameLines: true, diagnostics: null, saveTimer: null };
     const els = {
       compareMode: document.getElementById('compareMode'),
       toggleWhitespaceBtn: document.getElementById('toggleWhitespaceBtn'),
       toggleInvisibleBtn: document.getElementById('toggleInvisibleBtn'),
+      toggleSameBtn: document.getElementById('toggleSameBtn'),
       ignorePanel: document.getElementById('ignorePanel'),
       toggleIgnoreBtn: document.getElementById('toggleIgnoreBtn'),
       toggleIgnoreActiveBtn: document.getElementById('toggleIgnoreActiveBtn'),
@@ -459,6 +462,20 @@
     function updateInvisibleButton() {
       els.toggleInvisibleBtn.classList.toggle('active', state.showInvisibleChars);
     }
+    function updateSameButton() {
+      els.toggleSameBtn.classList.toggle('active', state.showSameLines);
+      const label = state.showSameLines ? 'Hide unchanged lines' : 'Show unchanged lines';
+      const iconEl = els.toggleSameBtn.querySelector('.btn-icon');
+      const textEl = els.toggleSameBtn.querySelector('.btn-text');
+      if (iconEl) {
+        iconEl.innerHTML = state.showSameLines
+          ? '<svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7s5.8 1.9 8 5.7c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>'
+          : '<svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7 1.95 0 3.89.86 5.68 2.57"/><path d="M20 12c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12"/><circle cx="12" cy="12" r="2.5"/><path d="M4 4l16 16"/></svg>';
+      }
+      if (textEl) textEl.textContent = label;
+      els.toggleSameBtn.title = label;
+      els.toggleSameBtn.setAttribute('aria-label', label);
+    }
     function ensurePatternsEnabledOnEdit() {
       if (state.ignorePatternsEnabled) return;
       state.ignorePatternsEnabled = true;
@@ -483,6 +500,7 @@
           ignorePatternsEnabled: state.ignorePatternsEnabled,
           ignoreWhitespace: state.ignoreWhitespace,
           showInvisibleChars: state.showInvisibleChars,
+          showSameLines: state.showSameLines,
           compareMode: state.compareMode,
           viewMode: state.viewMode
         }));
@@ -532,6 +550,7 @@
         if (typeof saved.ignorePatternsEnabled === 'boolean') state.ignorePatternsEnabled = saved.ignorePatternsEnabled;
         if (typeof saved.ignoreWhitespace === 'boolean') state.ignoreWhitespace = saved.ignoreWhitespace;
         if (typeof saved.showInvisibleChars === 'boolean') state.showInvisibleChars = saved.showInvisibleChars;
+        if (typeof saved.showSameLines === 'boolean') state.showSameLines = saved.showSameLines;
         if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'log' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
           state.compareMode = saved.compareMode;
           els.compareMode.value = saved.compareMode;
@@ -1018,13 +1037,22 @@
       return data;
     }
     function renderDiff(data) {
+      const visibleRows = state.showSameLines ? data.rows : data.rows.filter(row => row.kind !== 'same');
+      const visibleUnified = state.showSameLines ? data.unified : data.unified.filter(item => item.kind !== 'same');
+      if (!visibleRows.length && !visibleUnified.length) {
+        els.resultBody.innerHTML = '<div class="empty">No changed lines to show.</div>';
+        els.stats.innerHTML = `<span class="badge">unchanged: ${data.stats.same}</span><span class="badge">added: ${data.stats.added}</span><span class="badge">removed: ${data.stats.removed}</span><span class="badge">changed: ${data.stats.changed}</span>`;
+        updateViewButtons();
+        setupOverview();
+        return;
+      }
       const leftHead = escapeHtml(state.leftName || 'left.txt'), rightHead = escapeHtml(state.rightName || 'right.txt');
-      const sideRows = data.rows.map(row => {
+      const sideRows = visibleRows.map(row => {
         const leftClass = row.kind === 'added' ? 'placeholder' : (row.kind === 'deleted' ? 'del' : (row.kind === 'changed' ? 'changed' : 'same'));
         const rightClass = row.kind === 'deleted' ? 'placeholder' : (row.kind === 'added' ? 'add' : (row.kind === 'changed' ? 'changed' : 'same'));
         return `<div class="diff-row" data-kind="${escapeHtml(row.kind)}"><div class="half ${leftClass}"><div class="ln">${row.leftNo || ''}</div><div class="code">${row.leftHtml || ''}</div></div><div class="half ${rightClass}"><div class="ln">${row.rightNo || ''}</div><div class="code">${row.rightHtml || ''}</div></div></div>`;
       }).join('');
-      const unifiedRows = data.unified.map(item => {
+      const unifiedRows = visibleUnified.map(item => {
         let cls = '';
         if (item.sign === '+') cls = item.kind === 'changed' ? 'u-change' : 'u-add';
         else if (item.sign === '-') cls = item.kind === 'changed' ? 'u-change' : 'u-del';
@@ -1199,7 +1227,7 @@
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
       els.openFilesInput.value = '';
-      state.leftName = ''; state.rightName = ''; state.leftFileHandle = null; state.rightFileHandle = null; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false; state.diagnostics = null;
+      state.leftName = ''; state.rightName = ''; state.leftFileHandle = null; state.rightFileHandle = null; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false; state.showSameLines = true; state.diagnostics = null;
       els.compareMode.value = 'text'; els.leftName.textContent = '-'; els.rightName.textContent = '-'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
       updateFilePairMeta();
       els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Open two files to compare them.</div>';
@@ -1212,6 +1240,7 @@
       updateIgnoreEnabledButton();
       updateWhitespaceButton();
       updateInvisibleButton();
+      updateSameButton();
       updateViewButtons();
       updateRefreshButton();
       scheduleSave();
@@ -1229,6 +1258,12 @@
       state.showInvisibleChars = !state.showInvisibleChars;
       updateInvisibleButton();
       computeDiff();
+    });
+    els.toggleSameBtn.addEventListener('click', () => {
+      state.showSameLines = !state.showSameLines;
+      updateSameButton();
+      if (state.diffData) renderDiff(state.diffData);
+      scheduleSave();
     });
     els.toggleIgnoreBtn.addEventListener('click', () => {
       state.ignorePanelOpen = !state.ignorePanelOpen;
@@ -1298,6 +1333,7 @@
     updateIgnoreEnabledButton();
     updateWhitespaceButton();
     updateInvisibleButton();
+    updateSameButton();
     updateViewButtons();
     updateRefreshButton();
     if (els.leftText.value || els.rightText.value) computeDiff();
