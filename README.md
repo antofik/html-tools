@@ -18,6 +18,12 @@ The tools are designed for offline and local workflows
 ### `diff_viewer.html`
 
 Compares two text inputs or files and renders the result in browser.
+Rich UI with support of different file formats:
+![Diff Viewer screenshot 1](screenshots/diff_viewer/1.png)
+
+Allows to define patterns that should be ignored when comparing files,
+i.e. timestamps in log files:
+![Diff Viewer screenshot 3](screenshots/diff_viewer/3.png)
 
 Features:
 
@@ -100,7 +106,14 @@ Features:
 
 ### `log_viewer.html`
 
-Offline log inspection tool for large log files.
+Offline log inspection tool for large log files:
+![Log Viewer screenshot 1](screenshots/log_viewer/1.png)
+
+Supports filering wit regular expressions:
+![Log Viewer screenshot 2](screenshots/log_viewer/2.png)
+
+Stack traces no more pollute the log - instead they are hidden inside popup window:
+![Log Viewer screenshot 3](screenshots/log_viewer/3.png)
 
 Features:
 
