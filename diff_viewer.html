@@ -35,11 +35,10 @@
     .container { width: 100%; max-width: none; margin: 0; padding: 24px; }
     .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
     h1 { margin: 0; font-size: 30px; line-height: 1.1; color: #1f2937; }
-    .toolbar, .inputs { display: grid; gap: 16px; }
+    .toolbar { display: grid; gap: 16px; }
     .toolbar { display: flex; align-items: flex-end; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 0; }
     .control-group { display: grid; gap: 6px; align-content: start; }
     .control-label { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; padding-left: 2px; }
-    .inputs { grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
     .ignore-panel { margin-bottom: 18px; display: none; }
     .ignore-panel.open { display: block; }
     .ignore-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -97,6 +96,12 @@
     .view-block.active { display: block; }
     .result-shell { position: relative; }
     .result-scroll { border: 1px solid var(--border); border-radius: 14px; background: #ffffff; }
+    .result-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .result-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .result-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+    .file-pair-meta { font-size: 12px; color: var(--muted); min-width: 0; }
+    .file-pair-meta strong { color: #374151; font-weight: 700; }
+    .hidden-inputs { display: none; }
     .overview-rail { position: fixed; top: 0; right: 0; bottom: 0; width: 24px; border-left: 1px solid rgba(148, 163, 184, 0.18); background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 0; overflow: hidden; cursor: pointer; z-index: 20; }
     .overview-markers { position: absolute; inset: 0; }
     .overview-marker { position: absolute; left: 0; right: 0; min-height: 3px; opacity: .95; border-radius: 2px; }
@@ -133,7 +138,7 @@
     .error-box { padding: 18px; border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #991b1b; line-height: 1.45; }
     @media (max-width: 980px) {
       .app-header { flex-direction: column; align-items: flex-start; }
-      .toolbar, .inputs { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
       .toolbar { width: 100%; justify-content: flex-start; }
       .overview-rail { width: 24px; }
       .ignore-grid { grid-template-columns: 1fr; }
@@ -158,6 +163,7 @@
         </select>
       </div>
       <button id="computeBtn" class="icon-btn primary-run" type="button" title="Generate diff" aria-label="Generate diff"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 8v8l6-4z"/></svg></span><span class="btn-text">Generate diff</span></span></button>
+      <button id="refreshBtn" class="icon-btn" type="button" title="Refresh file from disk" aria-label="Refresh file from disk" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 12C2.5 12.2761 2.72386 12.5 3 12.5C3.27614 12.5 3.5 12.2761 3.5 12H2.5ZM3.5 12C3.5 7.30558 7.30558 3.5 12 3.5V2.5C6.75329 2.5 2.5 6.75329 2.5 12H3.5ZM12 3.5C15.3367 3.5 18.2252 5.4225 19.6167 8.22252L20.5122 7.77748C18.9583 4.65062 15.7308 2.5 12 2.5V3.5Z" fill="currentColor"/><path d="M20.4716 2.42157V8.07843H14.8147" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21.5 12C21.5 11.7239 21.2761 11.5 21 11.5C20.7239 11.5 20.5 11.7239 20.5 12L21.5 12ZM20.5 12C20.5 16.6944 16.6944 20.5 12 20.5L12 21.5C17.2467 21.5 21.5 17.2467 21.5 12L20.5 12ZM12 20.5C8.66333 20.5 5.77477 18.5775 4.38328 15.7775L3.48776 16.2225C5.04168 19.3494 8.26923 21.5 12 21.5L12 20.5Z" fill="currentColor"/><path d="M3.52844 21.5784L3.52844 15.9216L9.18529 15.9216" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="btn-text">Refresh file from disk</span></span></button>
       <button id="downloadBtn" class="icon-btn" type="button" title="Download unified diff HTML" aria-label="Download unified diff HTML" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="btn-text">Download unified diff HTML</span></span></button>
       <button id="toggleWhitespaceBtn" class="icon-btn" type="button" title="Ignore whitespace mismatches" aria-label="Ignore whitespace mismatches"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h16"/><path d="M4 12h10"/><path d="M4 16h16"/></svg></span><span class="btn-text">Ignore whitespace mismatches</span></span></button>
       <button id="toggleInvisibleBtn" class="icon-btn" type="button" title="Visualize invisible characters" aria-label="Visualize invisible characters"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7s5.8 1.9 8 5.7c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="btn-text">Visualize invisible characters</span></span></button>
@@ -197,26 +203,34 @@
         </div>
       </div>
     </div>
-    <div class="inputs">
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title">Left file</div><div class="small" id="leftMeta">not loaded</div></div>
-        <div class="panel-body">
-          <div class="dropzone" id="leftDrop"><input id="leftFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="leftName">-</div></div>
-          <textarea id="leftText" class="preview" spellcheck="false" placeholder="Left file content"></textarea>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title">Right file</div><div class="small" id="rightMeta">not loaded</div></div>
-        <div class="panel-body">
-          <div class="dropzone" id="rightDrop"><input id="rightFile" type="file" /><p>Drop a file here or click to select</p><div class="filename" id="rightName">-</div></div>
-          <textarea id="rightText" class="preview" spellcheck="false" placeholder="Right file content"></textarea>
-        </div>
-      </div>
-    </div>
     <div class="panel">
-      <div class="panel-header"><div class="panel-title">Result</div><div class="stats" id="stats"><span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span></div></div>
-      <div id="resultBody" class="panel-body"><div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div></div>
+      <div class="panel-header">
+        <div class="result-header">
+          <div class="result-actions">
+            <div class="panel-title">Result</div>
+            <button id="openBtn" type="button">Open</button>
+          </div>
+          <div class="result-summary">
+            <div id="filePairMeta" class="file-pair-meta">No files loaded</div>
+            <div class="stats" id="stats"><span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="resultBody" class="panel-body"><div class="empty">Nothing to show yet. Open two files to compare them.</div></div>
     </div>
+  </div>
+  <div class="hidden-inputs" aria-hidden="true">
+    <input id="openFilesInput" type="file" multiple />
+    <input id="leftFile" type="file" />
+    <input id="rightFile" type="file" />
+    <div id="leftDrop"></div>
+    <div id="rightDrop"></div>
+    <div id="leftName"></div>
+    <div id="rightName"></div>
+    <div id="leftMeta">not loaded</div>
+    <div id="rightMeta">not loaded</div>
+    <textarea id="leftText" spellcheck="false"></textarea>
+    <textarea id="rightText" spellcheck="false"></textarea>
   </div>
   <div id="pageDropOverlay" class="page-drop-overlay" aria-hidden="true">
     <div id="pageDropLeft" class="page-drop-zone">Drop file for left side</div>
@@ -225,7 +239,7 @@
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
-    const state = { leftName: '', rightName: '', diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, diagnostics: null, saveTimer: null };
+    const state = { leftName: '', rightName: '', leftFileHandle: null, rightFileHandle: null, diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, diagnostics: null, saveTimer: null };
     const els = {
       compareMode: document.getElementById('compareMode'),
       toggleWhitespaceBtn: document.getElementById('toggleWhitespaceBtn'),
@@ -237,6 +251,9 @@
       ignorePatterns: document.getElementById('ignorePatterns'),
       skipPatterns: document.getElementById('skipPatterns'),
       ignoreMeta: document.getElementById('ignoreMeta'),
+      openBtn: document.getElementById('openBtn'),
+      openFilesInput: document.getElementById('openFilesInput'),
+      filePairMeta: document.getElementById('filePairMeta'),
       leftFile: document.getElementById('leftFile'),
       rightFile: document.getElementById('rightFile'),
       leftText: document.getElementById('leftText'),
@@ -247,6 +264,7 @@
       rightMeta: document.getElementById('rightMeta'),
       resultBody: document.getElementById('resultBody'),
       computeBtn: document.getElementById('computeBtn'),
+      refreshBtn: document.getElementById('refreshBtn'),
       downloadBtn: document.getElementById('downloadBtn'),
       swapBtn: document.getElementById('swapBtn'),
       clearBtn: document.getElementById('clearBtn'),
@@ -469,6 +487,33 @@
         }));
       } catch {}
     }
+    function supportsFileSystemAccess() {
+      return typeof window.showOpenFilePicker === 'function';
+    }
+    function updateRefreshButton() {
+      const hasHandle = Boolean(state.leftFileHandle || state.rightFileHandle);
+      els.refreshBtn.disabled = !hasHandle;
+      if (state.leftFileHandle && state.rightFileHandle) els.refreshBtn.title = 'Refresh both files from disk';
+      else if (state.leftFileHandle) els.refreshBtn.title = 'Refresh left file from disk';
+      else if (state.rightFileHandle) els.refreshBtn.title = 'Refresh right file from disk';
+      else els.refreshBtn.title = 'Refresh file from disk';
+      els.refreshBtn.setAttribute('aria-label', els.refreshBtn.title);
+    }
+    function updateFilePairMeta() {
+      if (state.leftName && state.rightName) {
+        els.filePairMeta.innerHTML = `<strong>${escapeHtml(state.leftName)}</strong> vs <strong>${escapeHtml(state.rightName)}</strong>`;
+        return;
+      }
+      if (state.leftName) {
+        els.filePairMeta.innerHTML = `Loaded: <strong>${escapeHtml(state.leftName)}</strong>`;
+        return;
+      }
+      if (state.rightName) {
+        els.filePairMeta.innerHTML = `Loaded: <strong>${escapeHtml(state.rightName)}</strong>`;
+        return;
+      }
+      els.filePairMeta.textContent = 'No files loaded';
+    }
     function restoreState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -494,21 +539,83 @@
           state.viewMode = saved.viewMode;
         }
       } catch {}
+      updateFilePairMeta();
     }
-    function readFileInto(file, side) {
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const text = typeof reader.result === 'string' ? reader.result : '';
-        if (side === 'left') {
-          els.leftText.value = text; state.leftName = file.name; els.leftName.textContent = file.name; els.leftMeta.textContent = `${file.size.toLocaleString('en-US')} bytes`;
-        } else {
-          els.rightText.value = text; state.rightName = file.name; els.rightName.textContent = file.name; els.rightMeta.textContent = `${file.size.toLocaleString('en-US')} bytes`;
-        }
-        scheduleSave();
+    function updateFileMeta(side, fileName, fileSize, fileHandle = null) {
+      if (side === 'left') {
+        state.leftName = fileName;
+        state.leftFileHandle = fileHandle;
+        els.leftName.textContent = fileName || '-';
+        els.leftMeta.textContent = fileName ? `${fileSize.toLocaleString('en-US')} bytes` : 'not loaded';
+      } else {
+        state.rightName = fileName;
+        state.rightFileHandle = fileHandle;
+        els.rightName.textContent = fileName || '-';
+        els.rightMeta.textContent = fileName ? `${fileSize.toLocaleString('en-US')} bytes` : 'not loaded';
+      }
+      updateFilePairMeta();
+      updateRefreshButton();
+    }
+    function readFileInto(file, side, fileHandle = null, shouldCompute = true) {
+      if (!file) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const text = typeof reader.result === 'string' ? reader.result : '';
+          if (side === 'left') {
+            els.leftText.value = text;
+          } else {
+            els.rightText.value = text;
+          }
+          updateFileMeta(side, file.name, file.size, fileHandle);
+          scheduleSave();
+          if (shouldCompute) computeDiff();
+          resolve();
+        };
+        reader.onerror = () => reject(reader.error || new Error('Could not read file'));
+        reader.readAsText(file);
+      });
+    }
+    async function loadFilePair(leftSource, rightSource) {
+      if (!leftSource || !rightSource) return;
+      const leftFile = leftSource.file || await leftSource.handle.getFile();
+      const rightFile = rightSource.file || await rightSource.handle.getFile();
+      await Promise.all([
+        readFileInto(leftFile, 'left', leftSource.handle || null, false),
+        readFileInto(rightFile, 'right', rightSource.handle || null, false)
+      ]);
+      computeDiff();
+    }
+    async function openFiles() {
+      if (!supportsFileSystemAccess()) {
+        els.openFilesInput.click();
+        return;
+      }
+      try {
+        const handles = await window.showOpenFilePicker({
+          multiple: true,
+          types: [{
+            description: 'Text files',
+            accept: { 'text/plain': ['.txt', '.log', '.json', '.yaml', '.yml', '.env', '.cfg', '.conf'] }
+          }]
+        });
+        if (!handles || handles.length < 2) return;
+        await loadFilePair({ handle: handles[0] }, { handle: handles[1] });
+      } catch {}
+    }
+    async function refreshFromDisk() {
+      const jobs = [];
+      if (state.leftFileHandle) {
+        jobs.push(state.leftFileHandle.getFile().then(file => readFileInto(file, 'left', state.leftFileHandle, false)));
+      }
+      if (state.rightFileHandle) {
+        jobs.push(state.rightFileHandle.getFile().then(file => readFileInto(file, 'right', state.rightFileHandle, false)));
+      }
+      if (!jobs.length) return;
+      try {
+        await Promise.all(jobs);
         computeDiff();
-      };
-      reader.readAsText(file);
+      } catch {}
     }
     function isFileDrag(event) {
       const types = event.dataTransfer?.types;
@@ -1090,9 +1197,11 @@
     }
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
-      state.leftName = ''; state.rightName = ''; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false; state.diagnostics = null;
+      els.openFilesInput.value = '';
+      state.leftName = ''; state.rightName = ''; state.leftFileHandle = null; state.rightFileHandle = null; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false; state.diagnostics = null;
       els.compareMode.value = 'text'; els.leftName.textContent = '-'; els.rightName.textContent = '-'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
-      els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Load two files and click "Generate diff".</div>';
+      updateFilePairMeta();
+      els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Open two files to compare them.</div>';
       els.stats.innerHTML = `<span class="badge">unchanged: 0</span><span class="badge">added: 0</span><span class="badge">removed: 0</span><span class="badge">changed: 0</span>`;
       els.ignorePatterns.value = '';
       els.skipPatterns.value = '';
@@ -1103,9 +1212,12 @@
       updateWhitespaceButton();
       updateInvisibleButton();
       updateViewButtons();
+      updateRefreshButton();
       scheduleSave();
     }
+    els.openBtn.addEventListener('click', () => { void openFiles(); });
     els.computeBtn.addEventListener('click', computeDiff);
+    els.refreshBtn.addEventListener('click', () => { void refreshFromDisk(); });
     els.downloadBtn.addEventListener('click', downloadUnifiedHtml);
     els.toggleWhitespaceBtn.addEventListener('click', () => {
       state.ignoreWhitespace = !state.ignoreWhitespace;
@@ -1130,14 +1242,21 @@
     els.swapBtn.addEventListener('click', () => {
       [els.leftText.value, els.rightText.value] = [els.rightText.value, els.leftText.value];
       [state.leftName, state.rightName] = [state.rightName, state.leftName];
+      [state.leftFileHandle, state.rightFileHandle] = [state.rightFileHandle, state.leftFileHandle];
       els.leftName.textContent = state.leftName || '-';
       els.rightName.textContent = state.rightName || '-';
+      updateRefreshButton();
       computeDiff();
     });
     els.clearBtn.addEventListener('click', clearAll);
     els.viewSideBtn.addEventListener('click', () => setViewMode('side'));
     els.viewUnifiedBtn.addEventListener('click', () => setViewMode('unified'));
     els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; computeDiff(); });
+    els.openFilesInput.addEventListener('change', event => {
+      const files = Array.from(event.target.files || []);
+      if (files.length < 2) return;
+      void loadFilePair({ file: files[0] }, { file: files[1] });
+    });
     els.leftText.addEventListener('input', scheduleSave);
     els.rightText.addEventListener('input', scheduleSave);
     els.ignorePatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); computeDiff(); });
@@ -1163,10 +1282,15 @@
     window.addEventListener('drop', event => {
       if (!isFileDrag(event)) return;
       event.preventDefault();
-      const file = event.dataTransfer?.files?.[0];
-      const side = getPageDropSide(event.clientX);
       clearPageDropState();
-      if (file) readFileInto(file, side);
+      const files = Array.from(event.dataTransfer?.files || []);
+      if (files.length >= 2) {
+        void loadFilePair({ file: files[0] }, { file: files[1] });
+        return;
+      }
+      const file = files[0];
+      const side = getPageDropSide(event.clientX);
+      if (file) void readFileInto(file, side);
     });
     restoreState();
     updateIgnorePanelVisibility();
@@ -1174,6 +1298,7 @@
     updateWhitespaceButton();
     updateInvisibleButton();
     updateViewButtons();
+    updateRefreshButton();
     if (els.leftText.value || els.rightText.value) computeDiff();
     window.addEventListener('scroll', updateOverviewViewport, { passive: true });
     window.addEventListener('resize', refreshOverview);
