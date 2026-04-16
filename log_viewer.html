@@ -33,6 +33,23 @@
 
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: auto; overflow-y: auto; }
+    body.drag-file::before {
+      content: 'Drop log file to open';
+      position: fixed;
+      inset: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #86efac;
+      border-radius: 18px;
+      background: rgba(240, 253, 244, 0.92);
+      color: #166534;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      z-index: 80;
+      pointer-events: none;
+    }
     button, input, select, textarea { font: inherit; }
     .container { width: 100%; max-width: none; margin: 0; padding: 0 0 16px; min-height: 100vh; }
     .header-shell { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: var(--bg); padding: 0 12px 12px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); }
@@ -1255,6 +1272,29 @@
       scheduleSave();
     }
 
+    function isFileDrag(event) {
+      const types = Array.from(event.dataTransfer?.types || []);
+      return types.includes('Files');
+    }
+
+    function setDragFileActive(active) {
+      document.body.classList.toggle('drag-file', !!active);
+    }
+
+    function handleWindowDrag(event) {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      setDragFileActive(true);
+    }
+
+    function handleWindowDrop(event) {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      setDragFileActive(false);
+      const file = event.dataTransfer?.files?.[0];
+      if (file) loadFile(file);
+    }
+
     els.loadBtn.addEventListener('click', () => {
       els.fileInput.value = '';
       els.fileInput.click();
@@ -1337,6 +1377,14 @@
       if (event.key !== 'Escape') return;
       if (!els.stacktraceModal.hidden) closeStacktraceModal();
       if (!els.multilineModal.hidden) closeMultilineModal();
+    });
+    window.addEventListener('dragenter', handleWindowDrag);
+    window.addEventListener('dragover', handleWindowDrag);
+    window.addEventListener('drop', handleWindowDrop);
+    window.addEventListener('dragleave', event => {
+      if (event.target === document.documentElement || event.target === document.body) {
+        setDragFileActive(false);
+      }
     });
 
     window.addEventListener('beforeunload', () => {
