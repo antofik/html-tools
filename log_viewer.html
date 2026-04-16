@@ -183,6 +183,7 @@
         <div class="toolbar">
           <button id="parseBtn" class="icon-btn primary-run" type="button" title="Parse log" aria-label="Parse log"><span class="btn-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 8v8l6-4z"/></svg></span></button>
           <button id="loadBtn" class="icon-btn" type="button" title="Open log file" aria-label="Open log file"><span class="btn-icon"><svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17l2-5h14l-3 8a2 2 0 01-2 1H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h7a2 2 0 012 2v4" /></svg></span></button>
+          <button id="refreshBtn" class="icon-btn" type="button" title="Refresh file from disk" aria-label="Refresh file from disk" disabled><span class="btn-icon"><svg viewBox="0 0 24 24"><path d="M2.5 12C2.5 12.2761 2.72386 12.5 3 12.5C3.27614 12.5 3.5 12.2761 3.5 12H2.5ZM3.5 12C3.5 7.30558 7.30558 3.5 12 3.5V2.5C6.75329 2.5 2.5 6.75329 2.5 12H3.5ZM12 3.5C15.3367 3.5 18.2252 5.4225 19.6167 8.22252L20.5122 7.77748C18.9583 4.65062 15.7308 2.5 12 2.5V3.5Z" fill="currentColor"/><path d="M20.4716 2.42157V8.07843H14.8147" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21.5 12C21.5 11.7239 21.2761 11.5 21 11.5C20.7239 11.5 20.5 11.7239 20.5 12L21.5 12ZM20.5 12C20.5 16.6944 16.6944 20.5 12 20.5L12 21.5C17.2467 21.5 21.5 17.2467 21.5 12L20.5 12ZM12 20.5C8.66333 20.5 5.77477 18.5775 4.38328 15.7775L3.48776 16.2225C5.04168 19.3494 8.26923 21.5 12 21.5L12 20.5Z" fill="currentColor"/><path d="M3.52844 21.5784L3.52844 15.9216L9.18529 15.9216" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
           <button id="pasteBtn" class="icon-btn" type="button" title="Paste from clipboard" aria-label="Paste from clipboard">
             <span class="btn-icon">
 <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -275,6 +276,7 @@
 
   <script>
     const STORAGE_KEY = 'log_viewer_state_v1';
+    const DEFAULT_DOCUMENT_TITLE = 'Log Viewer';
     const SAVE_DEBOUNCE_MS = 220;
     const FILTER_DEBOUNCE_MS = 250;
     const FILTER_CHUNK_SIZE = 2000;
@@ -471,6 +473,7 @@
       rawText: '',
       fileName: '',
       fileSize: 0,
+      fileHandle: null,
       includePatternsText: '',
       excludePatternsText: '',
       regexSearch: false,
@@ -506,6 +509,7 @@
       errorCount: document.getElementById('errorCount'),
       fileInput: document.getElementById('fileInput'),
       loadBtn: document.getElementById('loadBtn'),
+      refreshBtn: document.getElementById('refreshBtn'),
       pasteBtn: document.getElementById('pasteBtn'),
       parseBtn: document.getElementById('parseBtn'),
       copyBtn: document.getElementById('copyBtn'),
@@ -592,9 +596,17 @@
       return new Promise(resolve => requestAnimationFrame(() => resolve()));
     }
 
+    function supportsFileSystemAccess() {
+      return typeof window.showOpenFilePicker === 'function';
+    }
+
     function syncHeaderSpacer() {
       const height = els.headerShell ? Math.ceil(els.headerShell.getBoundingClientRect().height) : 0;
       if (els.headerSpacer) els.headerSpacer.style.height = `${height}px`;
+    }
+
+    function updateDocumentTitle() {
+      document.title = state.fileName ? `${state.fileName} - ${DEFAULT_DOCUMENT_TITLE}` : DEFAULT_DOCUMENT_TITLE;
     }
 
     function saveStateNow() {
@@ -1088,6 +1100,7 @@
       } else {
         els.headerMeta.textContent = '';
       }
+      updateDocumentTitle();
       syncHeaderSpacer();
     }
 
@@ -1096,6 +1109,7 @@
       const hasFilters = hasActiveFilters();
       els.copyBtn.disabled = !hasVisible;
       els.downloadBtn.disabled = !hasVisible;
+      els.refreshBtn.disabled = !state.fileHandle;
       els.regexBtn.classList.toggle('active', state.regexSearch);
       els.virtualizationBtn.classList.toggle('active', state.virtualizationEnabled);
       els.searchToggleBtn.classList.toggle('active', hasFilters);
@@ -1172,15 +1186,17 @@
         if (!text) return;
         state.rawText = text;
         state.persistedRawText = false;
+        state.fileHandle = null;
         state.fileName = '';
         state.fileSize = new Blob([text]).size;
+        updateButtons();
         await parseCurrentText('Pasting and parsing log...');
       } catch {
         setStatus('Could not read clipboard', 'error');
       }
     }
 
-    function loadFile(file) {
+    function loadFile(file, fileHandle = null) {
       if (!file) return;
       const reader = new FileReader();
       state.fileToken += 1;
@@ -1201,12 +1217,47 @@
         const text = typeof reader.result === 'string' ? reader.result : '';
         state.rawText = text;
         state.persistedRawText = false;
+        state.fileHandle = fileHandle;
         state.fileName = file.name;
         state.fileSize = file.size;
         updateMeta();
+        updateButtons();
         await parseCurrentText(`Parsing ${file.name}...`);
       };
       reader.readAsText(file);
+    }
+
+    async function openFileFromPicker() {
+      if (!supportsFileSystemAccess()) {
+        els.fileInput.value = '';
+        els.fileInput.click();
+        return;
+      }
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{
+            description: 'Log files',
+            accept: { 'text/plain': ['.log', '.txt', '.out', '.json'] }
+          }]
+        });
+        if (!handle) return;
+        const file = await handle.getFile();
+        loadFile(file, handle);
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        setStatus('Could not open file', 'error');
+      }
+    }
+
+    async function refreshFromDisk() {
+      if (!state.fileHandle) return;
+      try {
+        const file = await state.fileHandle.getFile();
+        loadFile(file, state.fileHandle);
+      } catch {
+        setStatus('Could not refresh file from disk', 'error');
+      }
     }
 
     async function copyFiltered() {
@@ -1237,6 +1288,7 @@
     function clearAll() {
       state.rawText = '';
       state.persistedRawText = false;
+      state.fileHandle = null;
       state.fileName = '';
       state.fileSize = 0;
       state.entries = [];
@@ -1292,14 +1344,12 @@
       event.preventDefault();
       setDragFileActive(false);
       const file = event.dataTransfer?.files?.[0];
-      if (file) loadFile(file);
+      if (file) loadFile(file, null);
     }
 
-    els.loadBtn.addEventListener('click', () => {
-      els.fileInput.value = '';
-      els.fileInput.click();
-    });
-    els.fileInput.addEventListener('change', event => loadFile(event.target.files?.[0]));
+    els.loadBtn.addEventListener('click', () => { void openFileFromPicker(); });
+    els.refreshBtn.addEventListener('click', () => { void refreshFromDisk(); });
+    els.fileInput.addEventListener('change', event => loadFile(event.target.files?.[0], null));
     els.pasteBtn.addEventListener('click', () => { void pasteFromClipboard(); });
     els.parseBtn.addEventListener('click', () => { void parseCurrentText(); });
     els.copyBtn.addEventListener('click', () => { void copyFiltered(); });
