@@ -18,10 +18,12 @@ This repository contains arbitrary tools that:
   - Compares two text inputs using multiple comparison modes.
   - Supports loading each side from local files or editing/pasting text directly in the textareas.
   - Supports drag and drop for both input files.
-  - Supports `Plain text`, `Env`, `JSON`, and `YAML` comparison modes.
+  - Supports `Plain text`, `Env`, `Log`, `CSV`, `JSON`, and `YAML` comparison modes.
   - `Env` mode compares `key=value` entries by key and only performs inline comparison for matching keys.
+  - `CSV` mode parses the first row as headers and can compare only selected columns.
   - `JSON` mode parses both sides as JSON and compares structured paths while ignoring formatting differences.
   - `YAML` mode parses both sides as YAML and compares structured paths while ignoring formatting differences.
+  - Can ignore row order by sorting comparable rows before diffing.
   - Shows both `side-by-side` and `unified` diff views.
   - Highlights intraline character changes for modified lines.
   - Shows summary counters for unchanged, added, removed, and changed lines.

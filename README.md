@@ -30,11 +30,13 @@ Features:
 - plain-text diff
 - `Env` mode for `key=value` comparison by key
 - `Log` mode for log-oriented comparison
+- `CSV` mode with header-based column selection
 - `JSON` mode with structural comparison
 - `YAML` mode with structural comparison
 - side-by-side and unified views
 - intraline change highlighting
 - whitespace-ignore mode
+- row-order-ignore mode
 - invisible-character visualization
 - ignore patterns and skip-line patterns
 - drag-and-drop file loading

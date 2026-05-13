@@ -52,6 +52,16 @@
     .help-btn:hover + .help-tooltip, .help-btn:focus-visible + .help-tooltip { opacity: 1; transform: translateY(0); }
     .ignore-editor { min-height: 96px; max-height: 180px; margin-top: 0; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
     .ignore-editor.patterns-disabled { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
+    .csv-column-panel { display: none; margin-bottom: 14px; }
+    .csv-column-panel.active { display: block; }
+    .csv-column-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .csv-column-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .csv-column-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; max-height: 180px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: #ffffff; padding: 10px; }
+    .csv-column-empty { grid-column: 1 / -1; color: var(--muted); font-size: 13px; padding: 4px; }
+    .csv-column-option { min-width: 0; display: flex; align-items: center; gap: 8px; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; background: #fafafa; color: #374151; font-size: 13px; }
+    .csv-column-option input { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; accent-color: #22c55e; }
+    .csv-column-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); }
+    .csv-column-presence { margin-left: auto; flex: 0 0 auto; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .02em; }
     .panel { background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fafafa; }
     .panel-title { font-weight: 700; font-size: 14px; letter-spacing: .02em; color: #374151; }
@@ -168,6 +178,7 @@
           <option value="text">Plain text</option>
           <option value="env">Env</option>
           <option value="log">Log</option>
+          <option value="csv">CSV</option>
           <option value="json">JSON</option>
           <option value="yaml">YAML</option>
         </select>
@@ -176,9 +187,10 @@
       <button id="refreshBtn" class="icon-btn" type="button" title="Refresh file from disk" aria-label="Refresh file from disk" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 12C2.5 12.2761 2.72386 12.5 3 12.5C3.27614 12.5 3.5 12.2761 3.5 12H2.5ZM3.5 12C3.5 7.30558 7.30558 3.5 12 3.5V2.5C6.75329 2.5 2.5 6.75329 2.5 12H3.5ZM12 3.5C15.3367 3.5 18.2252 5.4225 19.6167 8.22252L20.5122 7.77748C18.9583 4.65062 15.7308 2.5 12 2.5V3.5Z" fill="currentColor"/><path d="M20.4716 2.42157V8.07843H14.8147" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21.5 12C21.5 11.7239 21.2761 11.5 21 11.5C20.7239 11.5 20.5 11.7239 20.5 12L21.5 12ZM20.5 12C20.5 16.6944 16.6944 20.5 12 20.5L12 21.5C17.2467 21.5 21.5 17.2467 21.5 12L20.5 12ZM12 20.5C8.66333 20.5 5.77477 18.5775 4.38328 15.7775L3.48776 16.2225C5.04168 19.3494 8.26923 21.5 12 21.5L12 20.5Z" fill="currentColor"/><path d="M3.52844 21.5784L3.52844 15.9216L9.18529 15.9216" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="btn-text">Refresh file from disk</span></span></button>
       <button id="downloadBtn" class="icon-btn" type="button" title="Download unified diff HTML" aria-label="Download unified diff HTML" disabled><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></span><span class="btn-text">Download unified diff HTML</span></span></button>
       <button id="toggleWhitespaceBtn" class="icon-btn" type="button" title="Ignore whitespace mismatches" aria-label="Ignore whitespace mismatches"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h16"/><path d="M4 12h10"/><path d="M4 16h16"/></svg></span><span class="btn-text">Ignore whitespace mismatches</span></span></button>
+      <button id="toggleRowOrderBtn" class="icon-btn" type="button" title="Ignore row order" aria-label="Ignore row order"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h11"/><path d="M4 12h8"/><path d="M4 17h5"/><path d="M18 5v14"/><path d="m15 16 3 3 3-3"/></svg></span><span class="btn-text">Ignore row order</span></span></button>
       <button id="toggleInvisibleBtn" class="icon-btn" type="button" title="Visualize invisible characters" aria-label="Visualize invisible characters"><span class="btn-content"><span class="btn-icon" aria-hidden="true" style="font-size:18px;line-height:1;font-family:var(--mono);font-weight:700;font-style:italic;">π</span><span class="btn-text">Visualize invisible characters</span></span></button>
       <button id="toggleSameBtn" class="text-toggle-btn active" type="button" title="Hide unchanged lines" aria-label="Hide unchanged lines"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12c2.2-3.8 5.1-5.7 8-5.7s5.8 1.9 8 5.7c-2.2 3.8-5.1 5.7-8 5.7S6.2 15.8 4 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="btn-text">Hide unchanged lines</span></span></button>
-      <button id="toggleIgnoreBtn" class="icon-btn with-badge" type="button" title="Ignore patterns" aria-label="Ignore patterns" aria-expanded="false" aria-controls="ignorePanel"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="btn-text">Ignore patterns</span></span><span id="ignoreBadge" class="icon-badge" aria-hidden="true">0</span></button>
+      <button id="toggleIgnoreBtn" class="icon-btn with-badge" type="button" title="Filters" aria-label="Filters" aria-expanded="false" aria-controls="ignorePanel"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="btn-text">Filters</span></span><span id="ignoreBadge" class="icon-badge" aria-hidden="true">0</span></button>
       <button id="swapBtn" class="icon-btn" type="button" title="Swap sides" aria-label="Swap sides"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></svg></span><span class="btn-text">Swap sides</span></span></button>
       <button id="clearBtn" class="icon-btn" type="button" title="Clear" aria-label="Clear"><span class="btn-content"><span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span class="btn-text">Clear</span></span></button>
       <div class="segmented" aria-label="Diff view mode">
@@ -188,8 +200,27 @@
     </div>
     </div>
     <div id="ignorePanel" class="panel ignore-panel">
-      <div class="panel-header"><div class="panel-title">Ignore Patterns</div><div style="display:flex;align-items:center;gap:10px;"><button id="toggleIgnoreActiveBtn" class="inline-toggle" type="button">Patterns on</button><div class="small" id="ignoreMeta">No ignore patterns</div></div></div>
+      <div class="panel-header"><div class="panel-title">Filters</div><div style="display:flex;align-items:center;gap:10px;"><button id="toggleIgnoreActiveBtn" class="inline-toggle" type="button">Patterns on</button><div class="small" id="ignoreMeta">No ignore patterns</div></div></div>
       <div class="panel-body">
+        <div id="csvColumnPanel" class="csv-column-panel">
+          <div class="csv-column-header">
+            <div class="ignore-block-title-row">
+              <div class="ignore-block-title">CSV Compare Columns</div>
+              <div class="ignore-help">
+                <button class="help-btn" type="button" aria-label="How CSV column filtering works">?</button>
+                <div class="help-tooltip">CSV mode reads the first row as headers. Selected columns are the only columns used for row matching and change detection; unselected columns are ignored.</div>
+              </div>
+            </div>
+            <div class="csv-column-actions">
+              <button id="csvColumnsAllBtn" class="inline-toggle" type="button">Select all</button>
+              <button id="csvColumnsClearBtn" class="inline-toggle" type="button">Clear</button>
+              <div id="csvColumnMeta" class="small">No CSV columns loaded</div>
+            </div>
+          </div>
+          <div id="csvColumnList" class="csv-column-list">
+            <div class="csv-column-empty">Switch to CSV mode and load two CSV files to choose columns.</div>
+          </div>
+        </div>
         <div class="ignore-grid">
           <div class="ignore-block">
             <div class="ignore-block-title-row">
@@ -250,10 +281,11 @@
   <script>
     const STORAGE_KEY = 'diff_viewer_state_v1';
     const SAVE_DEBOUNCE_MS = 180;
-    const state = { leftName: '', rightName: '', leftFileHandle: null, rightFileHandle: null, diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, showInvisibleChars: false, showSameLines: true, diagnostics: null, saveTimer: null };
+    const state = { leftName: '', rightName: '', leftFileHandle: null, rightFileHandle: null, diffData: null, viewMode: 'side', compareMode: 'text', ignorePatternsRaw: '', skipPatternsRaw: '', ignorePanelOpen: false, ignorePatternsEnabled: true, ignoreWhitespace: false, ignoreRowOrder: false, showInvisibleChars: false, showSameLines: true, csvSelectedColumns: null, csvAvailableColumns: [], diagnostics: null, saveTimer: null };
     const els = {
       compareMode: document.getElementById('compareMode'),
       toggleWhitespaceBtn: document.getElementById('toggleWhitespaceBtn'),
+      toggleRowOrderBtn: document.getElementById('toggleRowOrderBtn'),
       toggleInvisibleBtn: document.getElementById('toggleInvisibleBtn'),
       toggleSameBtn: document.getElementById('toggleSameBtn'),
       ignorePanel: document.getElementById('ignorePanel'),
@@ -263,6 +295,11 @@
       ignorePatterns: document.getElementById('ignorePatterns'),
       skipPatterns: document.getElementById('skipPatterns'),
       ignoreMeta: document.getElementById('ignoreMeta'),
+      csvColumnPanel: document.getElementById('csvColumnPanel'),
+      csvColumnList: document.getElementById('csvColumnList'),
+      csvColumnMeta: document.getElementById('csvColumnMeta'),
+      csvColumnsAllBtn: document.getElementById('csvColumnsAllBtn'),
+      csvColumnsClearBtn: document.getElementById('csvColumnsClearBtn'),
       openBtn: document.getElementById('openBtn'),
       openFilesInput: document.getElementById('openFilesInput'),
       filePairMeta: document.getElementById('filePairMeta'),
@@ -443,15 +480,33 @@
       }
       return { compiled, warnings: patternInfo.warnings, storedCount: patternInfo.storedCount, enabled: patternInfo.enabled };
     }
+    function getActiveCsvColumns(columns = state.csvAvailableColumns) {
+      const allColumns = columns || [];
+      if (!Array.isArray(state.csvSelectedColumns)) return allColumns.slice();
+      const selected = new Set(state.csvSelectedColumns);
+      return allColumns.filter(column => selected.has(column));
+    }
+    function getCsvColumnFilterInfo() {
+      const availableCount = state.compareMode === 'csv' ? state.csvAvailableColumns.length : 0;
+      const selectedCount = state.compareMode === 'csv' ? getActiveCsvColumns().length : 0;
+      return {
+        availableCount,
+        selectedCount,
+        active: state.compareMode === 'csv' && Array.isArray(state.csvSelectedColumns) && selectedCount !== availableCount
+      };
+    }
     function updateIgnoreMeta(ignorePatternInfo, skipPatternInfo) {
       const activeCount = ignorePatternInfo.compiled.length + skipPatternInfo.compiled.length;
       const warningCount = ignorePatternInfo.warnings.length + skipPatternInfo.warnings.length;
       const storedCount = ignorePatternInfo.storedCount + skipPatternInfo.storedCount;
+      const columnInfo = getCsvColumnFilterInfo();
+      const filterCount = activeCount + (columnInfo.active ? 1 : 0);
       const parts = [];
       if (ignorePatternInfo.compiled.length) parts.push(`value ${ignorePatternInfo.compiled.length}`);
       if (skipPatternInfo.compiled.length) parts.push(`line ${skipPatternInfo.compiled.length}`);
+      if (columnInfo.active) parts.push(`columns ${columnInfo.selectedCount}/${columnInfo.availableCount}`);
       if (state.diagnostics?.skipped) parts.push(`skipped L${state.diagnostics.skipped.left}/R${state.diagnostics.skipped.right}`);
-      if (!activeCount && !warningCount) {
+      if (!filterCount && !warningCount) {
         const hasStoredPatterns = (!ignorePatternInfo.enabled || !skipPatternInfo.enabled) && storedCount > 0;
         els.ignoreMeta.textContent = hasStoredPatterns ? `${storedCount} stored pattern${storedCount === 1 ? '' : 's'}, inactive` : (state.diagnostics?.skipped ? `No active patterns, skipped L${state.diagnostics.skipped.left}/R${state.diagnostics.skipped.right}` : 'No ignore patterns');
         els.ignoreBadge.textContent = hasStoredPatterns ? String(storedCount) : '0';
@@ -460,13 +515,13 @@
         return;
       }
       if (warningCount) {
-        els.ignoreMeta.textContent = `${activeCount} active, ${warningCount} invalid${parts.length ? `, ${parts.join(', ')}` : ''}`;
+        els.ignoreMeta.textContent = `${filterCount} active, ${warningCount} invalid${parts.length ? `, ${parts.join(', ')}` : ''}`;
       } else {
-        els.ignoreMeta.textContent = `${activeCount} active pattern${activeCount === 1 ? '' : 's'}${parts.length ? `, ${parts.join(', ')}` : ''}`;
+        els.ignoreMeta.textContent = `${filterCount} active filter${filterCount === 1 ? '' : 's'}${parts.length ? `, ${parts.join(', ')}` : ''}`;
       }
-      els.ignoreBadge.textContent = String(activeCount);
-      els.ignoreBadge.classList.toggle('visible', activeCount > 0);
-      els.ignoreBadge.classList.toggle('inactive', !ignorePatternInfo.enabled || !skipPatternInfo.enabled);
+      els.ignoreBadge.textContent = String(filterCount);
+      els.ignoreBadge.classList.toggle('visible', filterCount > 0);
+      els.ignoreBadge.classList.toggle('inactive', activeCount > 0 && (!ignorePatternInfo.enabled || !skipPatternInfo.enabled));
     }
     function updateIgnorePanelVisibility() {
       els.ignorePanel.classList.toggle('open', state.ignorePanelOpen);
@@ -482,8 +537,64 @@
     function updateWhitespaceButton() {
       els.toggleWhitespaceBtn.classList.toggle('active', state.ignoreWhitespace);
     }
+    function updateRowOrderButton() {
+      els.toggleRowOrderBtn.classList.toggle('active', state.ignoreRowOrder);
+    }
     function updateInvisibleButton() {
       els.toggleInvisibleBtn.classList.toggle('active', state.showInvisibleChars);
+    }
+    function updateCsvColumnPanelVisibility() {
+      els.csvColumnPanel.classList.toggle('active', state.compareMode === 'csv');
+    }
+    function setCsvSelectedColumns(columns) {
+      const available = state.csvAvailableColumns || [];
+      const allowed = new Set(available);
+      const selected = [...new Set(columns)].filter(column => allowed.has(column));
+      state.csvSelectedColumns = selected.length === available.length ? null : selected;
+    }
+    function renderCsvColumnOptions(leftHeaders = [], rightHeaders = []) {
+      const seen = new Set();
+      const columns = [];
+      for (const column of [...leftHeaders, ...rightHeaders]) {
+        if (!seen.has(column)) {
+          seen.add(column);
+          columns.push(column);
+        }
+      }
+      state.csvAvailableColumns = columns;
+      const leftSet = new Set(leftHeaders), rightSet = new Set(rightHeaders);
+      const selected = new Set(getActiveCsvColumns(columns));
+      updateCsvColumnPanelVisibility();
+      if (!columns.length) {
+        els.csvColumnMeta.textContent = state.compareMode === 'csv' ? 'No CSV columns loaded' : 'CSV mode only';
+        els.csvColumnList.innerHTML = '<div class="csv-column-empty">Switch to CSV mode and load two CSV files to choose columns.</div>';
+        return;
+      }
+      const selectedCount = selected.size;
+      els.csvColumnMeta.textContent = Array.isArray(state.csvSelectedColumns)
+        ? `${selectedCount}/${columns.length} selected`
+        : `${columns.length} column${columns.length === 1 ? '' : 's'}, all selected`;
+      els.csvColumnList.innerHTML = columns.map(column => {
+        const presence = leftSet.has(column) && rightSet.has(column) ? 'L/R' : (leftSet.has(column) ? 'L' : 'R');
+        return `<label class="csv-column-option" title="${escapeHtml(column)}"><input type="checkbox" value="${escapeHtml(column)}" ${selected.has(column) ? 'checked' : ''} /><span class="csv-column-name">${escapeHtml(column)}</span><span class="csv-column-presence">${presence}</span></label>`;
+      }).join('');
+    }
+    function renderCsvColumnError(message) {
+      state.csvAvailableColumns = [];
+      updateCsvColumnPanelVisibility();
+      els.csvColumnMeta.textContent = 'CSV columns unavailable';
+      els.csvColumnList.innerHTML = `<div class="csv-column-empty">${escapeHtml(message)}</div>`;
+    }
+    function refreshCsvColumnOptionsFromText() {
+      updateCsvColumnPanelVisibility();
+      if (state.compareMode !== 'csv') return;
+      try {
+        const leftDoc = parseCsvDocument(els.leftText.value);
+        const rightDoc = parseCsvDocument(els.rightText.value);
+        renderCsvColumnOptions(leftDoc.headers, rightDoc.headers);
+      } catch (error) {
+        renderCsvColumnError(error.message);
+      }
     }
     function updateSameButton() {
       els.toggleSameBtn.classList.toggle('active', state.showSameLines);
@@ -522,8 +633,10 @@
           ignorePanelOpen: state.ignorePanelOpen,
           ignorePatternsEnabled: state.ignorePatternsEnabled,
           ignoreWhitespace: state.ignoreWhitespace,
+          ignoreRowOrder: state.ignoreRowOrder,
           showInvisibleChars: state.showInvisibleChars,
           showSameLines: state.showSameLines,
+          csvSelectedColumns: state.csvSelectedColumns,
           compareMode: state.compareMode,
           viewMode: state.viewMode
         }));
@@ -572,9 +685,12 @@
         if (typeof saved.ignorePanelOpen === 'boolean') state.ignorePanelOpen = saved.ignorePanelOpen;
         if (typeof saved.ignorePatternsEnabled === 'boolean') state.ignorePatternsEnabled = saved.ignorePatternsEnabled;
         if (typeof saved.ignoreWhitespace === 'boolean') state.ignoreWhitespace = saved.ignoreWhitespace;
+        if (typeof saved.ignoreRowOrder === 'boolean') state.ignoreRowOrder = saved.ignoreRowOrder;
         if (typeof saved.showInvisibleChars === 'boolean') state.showInvisibleChars = saved.showInvisibleChars;
         if (typeof saved.showSameLines === 'boolean') state.showSameLines = saved.showSameLines;
-        if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'log' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
+        if (Array.isArray(saved.csvSelectedColumns)) state.csvSelectedColumns = saved.csvSelectedColumns;
+        else if (saved.csvSelectedColumns === null) state.csvSelectedColumns = null;
+        if (saved.compareMode === 'text' || saved.compareMode === 'env' || saved.compareMode === 'log' || saved.compareMode === 'csv' || saved.compareMode === 'json' || saved.compareMode === 'yaml') {
           state.compareMode = saved.compareMode;
           els.compareMode.value = saved.compareMode;
         }
@@ -583,6 +699,8 @@
         }
       } catch {}
       updateFilePairMeta();
+      updateCsvColumnPanelVisibility();
+      refreshCsvColumnOptionsFromText();
     }
     function updateFileMeta(side, fileName, fileSize, fileHandle = null) {
       if (side === 'left') {
@@ -641,7 +759,7 @@
           multiple: true,
           types: [{
             description: 'Text files',
-            accept: { 'text/plain': ['.txt', '.log', '.json', '.yaml', '.yml', '.env', '.cfg', '.conf'] }
+            accept: { 'text/plain': ['.txt', '.log', '.json', '.yaml', '.yml', '.env', '.cfg', '.conf', '.csv'], 'text/csv': ['.csv'] }
           }]
         });
         if (!handles || handles.length < 2) return;
@@ -723,13 +841,34 @@
       }
       return { left, right };
     }
+    function compareStableText(left, right) {
+      const a = String(left ?? ''), b = String(right ?? '');
+      const natural = a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      if (natural) return natural;
+      return a < b ? -1 : (a > b ? 1 : 0);
+    }
+    function getRowOrderSortKey(item) {
+      return item.compare ?? item.compareValueText ?? item.fullText ?? item.raw ?? item.id ?? '';
+    }
+    function maybeSortRowsForCompare(rows) {
+      if (!state.ignoreRowOrder) return rows;
+      return [...rows].sort((left, right) => (
+        compareStableText(getRowOrderSortKey(left), getRowOrderSortKey(right))
+        || compareStableText(left.fullText ?? left.raw ?? '', right.fullText ?? right.raw ?? '')
+        || compareStableText(left.id ?? '', right.id ?? '')
+      ));
+    }
     function stringifyStable(value) {
       if (Array.isArray(value)) return '[' + value.map(stringifyStable).join(',') + ']';
       if (value && typeof value === 'object') { const keys = Object.keys(value).sort(); return '{' + keys.map(key => JSON.stringify(key) + ':' + stringifyStable(value[key])).join(',') + '}'; }
       return JSON.stringify(value);
     }
     function sortDeep(value) {
-      if (Array.isArray(value)) return value.map(sortDeep);
+      if (Array.isArray(value)) {
+        const items = value.map(sortDeep);
+        if (state.ignoreRowOrder) items.sort((left, right) => compareStableText(stringifyStable(left), stringifyStable(right)));
+        return items;
+      }
       if (value && typeof value === 'object') { const out = {}; for (const key of Object.keys(value).sort()) out[key] = sortDeep(value[key]); return out; }
       return value;
     }
@@ -875,6 +1014,109 @@
         return { id: `key:${key}#${counts[key]}`, rawLine: line, keyText: key, prefixText, valueText, compareValueText: valueText, fullText: line };
       });
     }
+    function isEmptyCsvRow(row) {
+      return !row.length || row.every(cell => cell === '');
+    }
+    function parseCsvRows(text) {
+      const source = (text || '').replace(/^\uFEFF/, '');
+      const rows = [], row = [];
+      let field = '', inQuotes = false, quoted = false;
+      for (let index = 0; index < source.length; index++) {
+        const ch = source[index];
+        if (inQuotes) {
+          if (ch === '"') {
+            if (source[index + 1] === '"') {
+              field += '"';
+              index++;
+            } else {
+              inQuotes = false;
+            }
+          } else {
+            field += ch;
+          }
+          continue;
+        }
+        if (ch === '"' && field === '' && !quoted) {
+          inQuotes = true;
+          quoted = true;
+          continue;
+        }
+        if (ch === ',') {
+          row.push(field);
+          field = '';
+          quoted = false;
+          continue;
+        }
+        if (ch === '\r' || ch === '\n') {
+          row.push(field);
+          rows.push(row.splice(0, row.length));
+          field = '';
+          quoted = false;
+          if (ch === '\r' && source[index + 1] === '\n') index++;
+          continue;
+        }
+        field += ch;
+      }
+      if (inQuotes) throw new Error('Unclosed quoted field');
+      if (field !== '' || row.length || source.length) {
+        row.push(field);
+        rows.push(row.splice(0, row.length));
+      }
+      while (rows.length && isEmptyCsvRow(rows[rows.length - 1])) rows.pop();
+      return rows;
+    }
+    function buildCsvHeaders(headerRow, columnCount) {
+      const counts = Object.create(null);
+      return Array.from({ length: columnCount }, (_, index) => {
+        const rawName = headerRow[index] != null ? String(headerRow[index]).trim() : '';
+        const baseName = rawName || `Column ${index + 1}`;
+        counts[baseName] = (counts[baseName] || 0) + 1;
+        return counts[baseName] > 1 ? `${baseName} [${counts[baseName]}]` : baseName;
+      });
+    }
+    function parseCsvDocument(text) {
+      const rows = parseCsvRows(text);
+      if (!rows.length) throw new Error('CSV input is empty');
+      const columnCount = rows.reduce((max, row) => Math.max(max, row.length), rows[0].length);
+      const headers = buildCsvHeaders(rows[0], columnCount);
+      const dataRows = rows.slice(1).map((cells, index) => {
+        const cellMap = Object.create(null);
+        for (let columnIndex = 0; columnIndex < headers.length; columnIndex++) {
+          if (columnIndex < cells.length) cellMap[headers[columnIndex]] = cells[columnIndex];
+        }
+        return { sourceNo: index + 2, cells: cellMap };
+      });
+      return { headers, rows: dataRows };
+    }
+    function formatCsvCellForDisplay(value, present) {
+      return present ? JSON.stringify(value ?? '') : '<missing>';
+    }
+    function buildCsvRowText(cells, columns) {
+      return columns.map(column => {
+        const present = Object.prototype.hasOwnProperty.call(cells, column);
+        return `${column}=${formatCsvCellForDisplay(cells[column], present)}`;
+      }).join(', ');
+    }
+    function buildCsvRowCompare(cells, columns, patternInfo) {
+      return columns.map(column => {
+        const present = Object.prototype.hasOwnProperty.call(cells, column);
+        const value = present ? buildMatchText(cells[column] ?? '', patternInfo) : '[missing]';
+        return `${column}\u0000${value}`;
+      }).join('\u0001');
+    }
+    function buildCsvEntries(doc, selectedColumns, patternInfo) {
+      return doc.rows.map(row => {
+        const fullText = buildCsvRowText(row.cells, selectedColumns);
+        return {
+          raw: fullText,
+          rawLine: fullText,
+          fullText,
+          valueText: fullText,
+          compare: buildCsvRowCompare(row.cells, selectedColumns, patternInfo),
+          sourceNo: row.sourceNo
+        };
+      });
+    }
     function entryMatchesSkipPattern(item, skipPatternInfo) {
       return shouldSkipText(item.rawLine || '', skipPatternInfo)
         || shouldSkipText(item.keyText || '', skipPatternInfo)
@@ -906,6 +1148,7 @@
       const seen = new Set(), order = [];
       for (const item of leftEntries) if (!seen.has(item.id)) { seen.add(item.id); order.push(item.id); }
       for (const item of rightEntries) if (!seen.has(item.id)) { seen.add(item.id); order.push(item.id); }
+      if (state.ignoreRowOrder) order.sort(compareStableText);
       return order;
     }
     function buildRowsFromEntries(leftEntries, rightEntries, patternInfo) {
@@ -940,6 +1183,7 @@
       unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: `mode: ${state.compareMode}` });
+      if (state.ignoreRowOrder) unified.push({ sign: 'meta', kind: 'meta', text: 'row order: ignored' });
       for (const row of rows) {
         if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
         else if (row.kind === 'changed') {
@@ -953,11 +1197,14 @@
     }
     function buildTextDiff(leftText, rightText, patternInfo, skipPatternInfo) {
       const leftSourceLines = normalizeLines(leftText), rightSourceLines = normalizeLines(rightText);
-      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildMatchText(line, patternInfo) })), rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => ({ raw: line, compare: buildMatchText(line, patternInfo) })), raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
+      const leftLines = maybeSortRowsForCompare(leftSourceLines.map((line, index) => ({ raw: line, compare: buildMatchText(line, patternInfo), sourceNo: index + 1 })).filter(item => !shouldSkipText(item.raw, skipPatternInfo)));
+      const rightLines = maybeSortRowsForCompare(rightSourceLines.map((line, index) => ({ raw: line, compare: buildMatchText(line, patternInfo), sourceNo: index + 1 })).filter(item => !shouldSkipText(item.raw, skipPatternInfo)));
+      const raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare), rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
-          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(raw[i].a.raw), rightHtml: renderVisibleText(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          rows.push({ kind: 'same', leftNo: state.ignoreRowOrder ? raw[i].a.sourceNo : leftNo, rightNo: state.ignoreRowOrder ? raw[i].b.sourceNo : rightNo, leftHtml: renderVisibleText(raw[i].a.raw), rightHtml: renderVisibleText(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          leftNo++; rightNo++;
           same++; i++; continue;
         }
         const dels = [], ins = [];
@@ -967,18 +1214,22 @@
           const dl = dels[k], il = ins[k];
           if (dl != null && il != null) {
             if (dl.compare === il.compare) {
-              rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(dl.raw), rightHtml: renderVisibleText(il.raw), leftText: dl.raw, rightText: il.raw });
+              rows.push({ kind: 'same', leftNo: state.ignoreRowOrder ? dl.sourceNo : leftNo, rightNo: state.ignoreRowOrder ? il.sourceNo : rightNo, leftHtml: renderVisibleText(dl.raw), rightHtml: renderVisibleText(il.raw), leftText: dl.raw, rightText: il.raw });
+              leftNo++; rightNo++;
               same++;
             } else {
               const intra = diffChars(dl.raw, il.raw, patternInfo);
-              rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: dl.raw, rightText: il.raw });
+              rows.push({ kind: 'changed', leftNo: state.ignoreRowOrder ? dl.sourceNo : leftNo, rightNo: state.ignoreRowOrder ? il.sourceNo : rightNo, leftHtml: intra.left, rightHtml: intra.right, leftText: dl.raw, rightText: il.raw });
+              leftNo++; rightNo++;
               changed++;
             }
           } else if (dl != null) {
-            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(dl.raw), rightHtml: '', leftText: dl.raw, rightText: '' });
+            rows.push({ kind: 'deleted', leftNo: state.ignoreRowOrder ? dl.sourceNo : leftNo, rightNo: '', leftHtml: renderVisibleText(dl.raw), rightHtml: '', leftText: dl.raw, rightText: '' });
+            leftNo++;
             removed++;
           } else if (il != null) {
-            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: renderVisibleText(il.raw), leftText: '', rightText: il.raw });
+            rows.push({ kind: 'added', leftNo: '', rightNo: state.ignoreRowOrder ? il.sourceNo : rightNo, leftHtml: '', rightHtml: renderVisibleText(il.raw), leftText: '', rightText: il.raw });
+            rightNo++;
             added++;
           }
         }
@@ -987,6 +1238,7 @@
       unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: 'mode: text' });
+      if (state.ignoreRowOrder) unified.push({ sign: 'meta', kind: 'meta', text: 'row order: ignored' });
       for (const row of rows) {
         if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
         else if (row.kind === 'changed') {
@@ -1001,14 +1253,15 @@
     function buildLogDiff(leftText, rightText, patternInfo, skipPatternInfo) {
       const inlinePatternInfo = buildLogInlinePatternInfo(patternInfo);
       const leftSourceLines = normalizeLines(leftText), rightSourceLines = normalizeLines(rightText);
-      const leftLines = leftSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, inlinePatternInfo));
-      const rightLines = rightSourceLines.filter(line => !shouldSkipText(line, skipPatternInfo)).map(line => buildLogLineInfo(line, inlinePatternInfo));
+      const leftLines = maybeSortRowsForCompare(leftSourceLines.map((line, index) => ({ ...buildLogLineInfo(line, inlinePatternInfo), sourceNo: index + 1 })).filter(item => !shouldSkipText(item.raw, skipPatternInfo)));
+      const rightLines = maybeSortRowsForCompare(rightSourceLines.map((line, index) => ({ ...buildLogLineInfo(line, inlinePatternInfo), sourceNo: index + 1 })).filter(item => !shouldSkipText(item.raw, skipPatternInfo)));
       const raw = diffArray(leftLines, rightLines, (left, right) => left.compare === right.compare);
       const rows = [];
       let i = 0, leftNo = 1, rightNo = 1, added = 0, removed = 0, changed = 0, same = 0;
       while (i < raw.length) {
         if (raw[i].type === 'equal') {
-          rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(raw[i].a.raw), rightHtml: renderVisibleText(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          rows.push({ kind: 'same', leftNo: state.ignoreRowOrder ? raw[i].a.sourceNo : leftNo, rightNo: state.ignoreRowOrder ? raw[i].b.sourceNo : rightNo, leftHtml: renderVisibleText(raw[i].a.raw), rightHtml: renderVisibleText(raw[i].b.raw), leftText: raw[i].a.raw, rightText: raw[i].b.raw });
+          leftNo++; rightNo++;
           same++;
           i++;
           continue;
@@ -1024,18 +1277,22 @@
           const leftLine = dels[index], rightLine = ins[index];
           if (leftLine != null && rightLine != null) {
             if (leftLine.compare === rightLine.compare) {
-              rows.push({ kind: 'same', leftNo: leftNo++, rightNo: rightNo++, leftHtml: renderVisibleText(leftLine.raw), rightHtml: renderVisibleText(rightLine.raw), leftText: leftLine.raw, rightText: rightLine.raw });
+              rows.push({ kind: 'same', leftNo: state.ignoreRowOrder ? leftLine.sourceNo : leftNo, rightNo: state.ignoreRowOrder ? rightLine.sourceNo : rightNo, leftHtml: renderVisibleText(leftLine.raw), rightHtml: renderVisibleText(rightLine.raw), leftText: leftLine.raw, rightText: rightLine.raw });
+              leftNo++; rightNo++;
               same++;
             } else {
               const intra = diffChars(leftLine.raw, rightLine.raw, inlinePatternInfo);
-              rows.push({ kind: 'changed', leftNo: leftNo++, rightNo: rightNo++, leftHtml: intra.left, rightHtml: intra.right, leftText: leftLine.raw, rightText: rightLine.raw });
+              rows.push({ kind: 'changed', leftNo: state.ignoreRowOrder ? leftLine.sourceNo : leftNo, rightNo: state.ignoreRowOrder ? rightLine.sourceNo : rightNo, leftHtml: intra.left, rightHtml: intra.right, leftText: leftLine.raw, rightText: rightLine.raw });
+              leftNo++; rightNo++;
               changed++;
             }
           } else if (leftLine != null) {
-            rows.push({ kind: 'deleted', leftNo: leftNo++, rightNo: '', leftHtml: renderVisibleText(leftLine.raw), rightHtml: '', leftText: leftLine.raw, rightText: '' });
+            rows.push({ kind: 'deleted', leftNo: state.ignoreRowOrder ? leftLine.sourceNo : leftNo, rightNo: '', leftHtml: renderVisibleText(leftLine.raw), rightHtml: '', leftText: leftLine.raw, rightText: '' });
+            leftNo++;
             removed++;
           } else if (rightLine != null) {
-            rows.push({ kind: 'added', leftNo: '', rightNo: rightNo++, leftHtml: '', rightHtml: renderVisibleText(rightLine.raw), leftText: '', rightText: rightLine.raw });
+            rows.push({ kind: 'added', leftNo: '', rightNo: state.ignoreRowOrder ? rightLine.sourceNo : rightNo, leftHtml: '', rightHtml: renderVisibleText(rightLine.raw), leftText: '', rightText: rightLine.raw });
+            rightNo++;
             added++;
           }
         }
@@ -1044,6 +1301,7 @@
       unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.txt'}` });
       unified.push({ sign: 'meta', kind: 'meta', text: 'mode: log' });
+      if (state.ignoreRowOrder) unified.push({ sign: 'meta', kind: 'meta', text: 'row order: ignored' });
       for (const row of rows) {
         if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
         else if (row.kind === 'changed') {
@@ -1066,6 +1324,77 @@
       const data = buildRowsFromEntries(filteredLeftEntries, filteredRightEntries, patternInfo);
       data.diagnostics = { source: 'env', skipped: { left: leftEntries.length - filteredLeftEntries.length, right: rightEntries.length - filteredRightEntries.length } };
       return data;
+    }
+    function buildCsvDiff(leftText, rightText, patternInfo, skipPatternInfo) {
+      const leftDoc = parseCsvDocument(leftText), rightDoc = parseCsvDocument(rightText);
+      renderCsvColumnOptions(leftDoc.headers, rightDoc.headers);
+      const selectedColumns = getActiveCsvColumns();
+      if (!selectedColumns.length) throw new Error('Select at least one CSV column to compare');
+      const leftEntries = maybeSortRowsForCompare(buildCsvEntries(leftDoc, selectedColumns, patternInfo));
+      const rightEntries = maybeSortRowsForCompare(buildCsvEntries(rightDoc, selectedColumns, patternInfo));
+      const filteredLeftEntries = filterEntriesBySkipPatterns(leftEntries, skipPatternInfo);
+      const filteredRightEntries = filterEntriesBySkipPatterns(rightEntries, skipPatternInfo);
+      const raw = diffArray(filteredLeftEntries, filteredRightEntries, (left, right) => left.compare === right.compare);
+      const rows = [];
+      let i = 0, added = 0, removed = 0, changed = 0, same = 0;
+      while (i < raw.length) {
+        if (raw[i].type === 'equal') {
+          rows.push({ kind: 'same', leftNo: raw[i].a.sourceNo, rightNo: raw[i].b.sourceNo, leftHtml: renderVisibleText(raw[i].a.fullText), rightHtml: renderVisibleText(raw[i].b.fullText), leftText: raw[i].a.fullText, rightText: raw[i].b.fullText });
+          same++;
+          i++;
+          continue;
+        }
+        const dels = [], ins = [];
+        while (i < raw.length && raw[i].type !== 'equal') {
+          if (raw[i].type === 'delete') dels.push(raw[i].a);
+          if (raw[i].type === 'insert') ins.push(raw[i].b);
+          i++;
+        }
+        const pairCount = Math.max(dels.length, ins.length);
+        for (let index = 0; index < pairCount; index++) {
+          const leftRow = dels[index], rightRow = ins[index];
+          if (leftRow != null && rightRow != null) {
+            if (leftRow.compare === rightRow.compare) {
+              rows.push({ kind: 'same', leftNo: leftRow.sourceNo, rightNo: rightRow.sourceNo, leftHtml: renderVisibleText(leftRow.fullText), rightHtml: renderVisibleText(rightRow.fullText), leftText: leftRow.fullText, rightText: rightRow.fullText });
+              same++;
+            } else {
+              const intra = diffChars(leftRow.fullText, rightRow.fullText, patternInfo);
+              rows.push({ kind: 'changed', leftNo: leftRow.sourceNo, rightNo: rightRow.sourceNo, leftHtml: intra.left, rightHtml: intra.right, leftText: leftRow.fullText, rightText: rightRow.fullText });
+              changed++;
+            }
+          } else if (leftRow != null) {
+            rows.push({ kind: 'deleted', leftNo: leftRow.sourceNo, rightNo: '', leftHtml: renderVisibleText(leftRow.fullText), rightHtml: '', leftText: leftRow.fullText, rightText: '' });
+            removed++;
+          } else if (rightRow != null) {
+            rows.push({ kind: 'added', leftNo: '', rightNo: rightRow.sourceNo, leftHtml: '', rightHtml: renderVisibleText(rightRow.fullText), leftText: '', rightText: rightRow.fullText });
+            added++;
+          }
+        }
+      }
+      const unified = [];
+      unified.push({ sign: 'meta', kind: 'meta', text: `--- ${state.leftName || 'left.csv'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: `+++ ${state.rightName || 'right.csv'}` });
+      unified.push({ sign: 'meta', kind: 'meta', text: 'mode: csv' });
+      unified.push({ sign: 'meta', kind: 'meta', text: `columns: ${selectedColumns.join(', ')}` });
+      if (state.ignoreRowOrder) unified.push({ sign: 'meta', kind: 'meta', text: 'row order: ignored' });
+      for (const row of rows) {
+        if (row.kind === 'same') unified.push({ sign: ' ', kind: 'same', html: renderVisibleText(row.leftText), text: row.leftText });
+        else if (row.kind === 'changed') {
+          unified.push({ sign: '-', kind: 'changed', html: row.leftHtml, text: row.leftText });
+          unified.push({ sign: '+', kind: 'changed', html: row.rightHtml, text: row.rightText });
+        } else if (row.kind === 'deleted') unified.push({ sign: '-', kind: 'deleted', html: renderVisibleText(row.leftText), text: row.leftText });
+        else unified.push({ sign: '+', kind: 'added', html: renderVisibleText(row.rightText), text: row.rightText });
+      }
+      return {
+        rows,
+        unified,
+        stats: { same, added, removed, changed },
+        diagnostics: {
+          source: 'csv',
+          skipped: { left: leftEntries.length - filteredLeftEntries.length, right: rightEntries.length - filteredRightEntries.length },
+          csv: { selectedColumns, availableColumns: state.csvAvailableColumns.slice(), ignoreRowOrder: state.ignoreRowOrder }
+        }
+      };
     }
     function buildStructuredObjectDiff(leftObj, rightObj, patternInfo, skipPatternInfo) {
       const leftEntries = flattenStructured(leftObj, patternInfo), rightEntries = flattenStructured(rightObj, patternInfo);
@@ -1122,8 +1451,10 @@
       const ignoreMeta = patternInfo.compiled.length ? `Ignore-in-values: ${escapeHtml(patternInfo.compiled.map(item => item.source).join(' | '))}<br />` : 'Ignore-in-values: none<br />';
       const skipMeta = skipPatternInfo.compiled.length ? `Skip-lines: ${escapeHtml(skipPatternInfo.compiled.map(item => item.source).join(' | '))}<br />` : 'Skip-lines: none<br />';
       const enabledMeta = `Patterns enabled: ${state.ignorePatternsEnabled ? 'yes' : 'no'}<br />`;
+      const rowOrderMeta = `Ignore row order: ${state.ignoreRowOrder ? 'yes' : 'no'}<br />`;
+      const csvMeta = data.diagnostics?.csv ? `CSV columns: ${escapeHtml(data.diagnostics.csv.selectedColumns.join(', '))}<br />` : '';
       const skippedMeta = data.diagnostics?.skipped ? `Skipped rows: left ${data.diagnostics.skipped.left}, right ${data.diagnostics.skipped.right}<br />` : '';
-      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#ecfdf5;--change-bg:#fffbeb;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-change .u-code{background:var(--change-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fde68a;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />${enabledMeta}${ignoreMeta}${skipMeta}${skippedMeta}View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
+      return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Unified diff</title><style>:root{--text:#334155;--muted:#64748b;--border:#e7e5e4;--add-bg:#ecfdf5;--del-bg:#ecfdf5;--change-bg:#fffbeb;--meta-bg:#eff6ff;--shadow:0 8px 24px rgba(15,23,42,.06)}*{box-sizing:border-box}body{margin:0;color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#ffffff}.wrap{width:100%;max-width:none;margin:0;padding:24px}h1{margin:0 0 10px;font-size:24px;font-family:system-ui,sans-serif;color:#1f2937}.meta{color:var(--muted);margin-bottom:18px;font-family:system-ui,sans-serif;line-height:1.45}.box{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#ffffff;box-shadow:var(--shadow)}.u-line{display:grid;grid-template-columns:42px 1fr;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5}.u-sign{text-align:center;padding:6px 4px;color:var(--muted);border-right:1px solid #f1f5f9;background:#fff;user-select:none}.u-code{padding:6px 10px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}.u-add .u-code{background:var(--add-bg)}.u-del .u-code{background:var(--del-bg)}.u-change .u-code{background:var(--change-bg)}.u-meta .u-code{color:#2563eb;background:var(--meta-bg)}.seg-add{background:#bbf7d0;border-radius:3px}.seg-del{background:#fde68a;border-radius:3px}@media (max-width:700px){.wrap{padding:16px}.u-line{grid-template-columns:34px 1fr}}</style></head><body><div class="wrap"><h1>Unified diff</h1><div class="meta">Left: ${escapeHtml(state.leftName || 'left.txt')}<br />Right: ${escapeHtml(state.rightName || 'right.txt')}<br />Compare mode: ${escapeHtml(state.compareMode)}<br />${enabledMeta}${rowOrderMeta}${csvMeta}${ignoreMeta}${skipMeta}${skippedMeta}View: unified</div><div class="box">${unifiedRows}</div></div></body></html>`;
     }
     function downloadUnifiedHtml() {
       if (!state.diffData) return;
@@ -1141,6 +1472,7 @@
       await waitForNextPaint();
       const left = els.leftText.value, right = els.rightText.value;
       state.compareMode = els.compareMode.value;
+      updateCsvColumnPanelVisibility();
       const patternInfo = buildIgnorePatternInfo();
       const skipPatternInfo = buildSkipPatternInfo();
       updateIgnoreMeta(patternInfo, skipPatternInfo);
@@ -1148,6 +1480,7 @@
         let data;
         if (state.compareMode === 'env') data = buildEnvDiff(left, right, patternInfo, skipPatternInfo);
         else if (state.compareMode === 'log') data = buildLogDiff(left, right, patternInfo, skipPatternInfo);
+        else if (state.compareMode === 'csv') data = buildCsvDiff(left, right, patternInfo, skipPatternInfo);
         else if (state.compareMode === 'json') data = buildStructuredObjectDiff(parseJsonText(left), parseJsonText(right), patternInfo, skipPatternInfo);
         else if (state.compareMode === 'yaml') data = buildStructuredObjectDiff(parseYamlText(left), parseYamlText(right), patternInfo, skipPatternInfo);
         else data = buildTextDiff(left, right, patternInfo, skipPatternInfo);
@@ -1156,8 +1489,10 @@
         console.info('[Diff viewer]', {
           compareMode: state.compareMode,
           patternsEnabled: state.ignorePatternsEnabled,
+          ignoreRowOrder: state.ignoreRowOrder,
           ignorePatterns: patternInfo.compiled.map(item => item.source),
           skipPatterns: skipPatternInfo.compiled.map(item => item.source),
+          csvColumns: state.compareMode === 'csv' ? getActiveCsvColumns() : undefined,
           diagnostics: state.diagnostics
         });
         updateIgnoreMeta(patternInfo, skipPatternInfo);
@@ -1166,6 +1501,7 @@
         scheduleSave();
       } catch (error) {
         state.diagnostics = null;
+        if (state.compareMode === 'csv' && !state.csvAvailableColumns.length) renderCsvColumnError(error.message);
         renderError(`${state.compareMode.toUpperCase()} compare error: ${error.message}`);
         scheduleSave();
       }
@@ -1267,7 +1603,7 @@
     function clearAll() {
       els.leftFile.value = ''; els.rightFile.value = ''; els.leftText.value = ''; els.rightText.value = '';
       els.openFilesInput.value = '';
-      state.leftName = ''; state.rightName = ''; state.leftFileHandle = null; state.rightFileHandle = null; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.showInvisibleChars = false; state.showSameLines = true; state.diagnostics = null;
+      state.leftName = ''; state.rightName = ''; state.leftFileHandle = null; state.rightFileHandle = null; state.diffData = null; state.viewMode = 'side'; state.compareMode = 'text'; state.ignorePanelOpen = false; state.ignorePatternsEnabled = true; state.ignoreWhitespace = false; state.ignoreRowOrder = false; state.showInvisibleChars = false; state.showSameLines = true; state.csvSelectedColumns = null; state.csvAvailableColumns = []; state.diagnostics = null;
       els.compareMode.value = 'text'; els.leftName.textContent = '-'; els.rightName.textContent = '-'; els.leftMeta.textContent = 'not loaded'; els.rightMeta.textContent = 'not loaded';
       updateFilePairMeta();
       els.resultBody.innerHTML = '<div class="empty">Nothing to show yet. Open two files to compare them.</div>';
@@ -1279,7 +1615,9 @@
       updateIgnorePanelVisibility();
       updateIgnoreEnabledButton();
       updateWhitespaceButton();
+      updateRowOrderButton();
       updateInvisibleButton();
+      renderCsvColumnOptions();
       updateSameButton();
       updateViewButtons();
       updateRefreshButton();
@@ -1293,6 +1631,11 @@
       state.ignoreWhitespace = !state.ignoreWhitespace;
       updateWhitespaceButton();
       void computeDiff('Applying whitespace setting...');
+    });
+    els.toggleRowOrderBtn.addEventListener('click', () => {
+      state.ignoreRowOrder = !state.ignoreRowOrder;
+      updateRowOrderButton();
+      void computeDiff('Applying row order setting...');
     });
     els.toggleInvisibleBtn.addEventListener('click', () => {
       state.showInvisibleChars = !state.showInvisibleChars;
@@ -1327,14 +1670,36 @@
     els.clearBtn.addEventListener('click', clearAll);
     els.viewSideBtn.addEventListener('click', () => setViewMode('side'));
     els.viewUnifiedBtn.addEventListener('click', () => setViewMode('unified'));
-    els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; void computeDiff('Changing comparison mode...'); });
+    els.compareMode.addEventListener('change', () => { state.compareMode = els.compareMode.value; updateCsvColumnPanelVisibility(); refreshCsvColumnOptionsFromText(); void computeDiff('Changing comparison mode...'); });
+    els.csvColumnList.addEventListener('change', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+      const available = state.csvAvailableColumns || [];
+      const current = Array.isArray(state.csvSelectedColumns) ? getActiveCsvColumns(available) : available.slice();
+      const selected = new Set(current);
+      if (target.checked) selected.add(target.value);
+      else selected.delete(target.value);
+      setCsvSelectedColumns([...selected]);
+      refreshCsvColumnOptionsFromText();
+      void computeDiff('Applying CSV columns...');
+    });
+    els.csvColumnsAllBtn.addEventListener('click', () => {
+      state.csvSelectedColumns = null;
+      refreshCsvColumnOptionsFromText();
+      void computeDiff('Applying CSV columns...');
+    });
+    els.csvColumnsClearBtn.addEventListener('click', () => {
+      state.csvSelectedColumns = [];
+      refreshCsvColumnOptionsFromText();
+      void computeDiff('Applying CSV columns...');
+    });
     els.openFilesInput.addEventListener('change', event => {
       const files = Array.from(event.target.files || []);
       if (files.length < 2) return;
       void loadFilePair({ file: files[0] }, { file: files[1] });
     });
-    els.leftText.addEventListener('input', scheduleSave);
-    els.rightText.addEventListener('input', scheduleSave);
+    els.leftText.addEventListener('input', () => { scheduleSave(); refreshCsvColumnOptionsFromText(); });
+    els.rightText.addEventListener('input', () => { scheduleSave(); refreshCsvColumnOptionsFromText(); });
     els.ignorePatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.ignorePatternsRaw = els.ignorePatterns.value; scheduleSave(); });
     els.skipPatterns.addEventListener('input', () => { ensurePatternsEnabledOnEdit(); state.skipPatternsRaw = els.skipPatterns.value; scheduleSave(); });
     els.ignorePatterns.addEventListener('blur', () => { state.ignorePatternsRaw = els.ignorePatterns.value; void computeDiff('Applying ignore patterns...'); });
@@ -1374,7 +1739,9 @@
     updateIgnorePanelVisibility();
     updateIgnoreEnabledButton();
     updateWhitespaceButton();
+    updateRowOrderButton();
     updateInvisibleButton();
+    refreshCsvColumnOptionsFromText();
     updateSameButton();
     updateViewButtons();
     updateRefreshButton();
